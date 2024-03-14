@@ -3,6 +3,8 @@ package docker
 import (
 	"context"
 
+	"github.com/docker/docker/api/types/container"
+
 	"github.com/1Panel-dev/1Panel/backend/app/model"
 	"github.com/1Panel-dev/1Panel/backend/global"
 
@@ -44,24 +46,17 @@ func NewDockerClient() (*client.Client, error) {
 	return cli, nil
 }
 
-func (c Client) ListAllContainers() ([]types.Container, error) {
-	var options types.ContainerListOptions
-	containers, err := c.cli.ContainerList(context.Background(), options)
-	if err != nil {
-		return nil, err
-	}
-	return containers, nil
-}
-
 func (c Client) ListContainersByName(names []string) ([]types.Container, error) {
 	var (
-		options types.ContainerListOptions
-		res     []types.Container
+		options  container.ListOptions
+		namesMap = make(map[string]bool)
+		res      []types.Container
 	)
 	options.All = true
 	if len(names) > 0 {
 		var array []filters.KeyValuePair
 		for _, n := range names {
+			namesMap["/"+n] = true
 			array = append(array, filters.Arg("name", n))
 		}
 		options.Filters = filters.NewArgs(array...)
@@ -70,9 +65,9 @@ func (c Client) ListContainersByName(names []string) ([]types.Container, error) 
 	if err != nil {
 		return nil, err
 	}
-	for _, container := range containers {
-		if container.Names[0] == "/"+names[0] {
-			res = append(res, container)
+	for _, con := range containers {
+		if _, ok := namesMap[con.Names[0]]; ok {
+			res = append(res, con)
 		}
 	}
 	return res, nil

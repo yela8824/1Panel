@@ -53,37 +53,29 @@
                 </el-col>
 
                 <el-col :xs="24" :sm="4" :md="4" :lg="4" :xl="4">
-                    <div class="search-button">
-                        <el-input
-                            class="table-button"
-                            v-model="searchReq.name"
-                            clearable
-                            @clear="search()"
-                            suffix-icon="Search"
-                            @keyup.enter="search()"
-                            @change="search()"
-                            :placeholder="$t('commons.button.search')"
-                        ></el-input>
-                    </div>
+                    <TableSearch @search="search()" v-model:searchName="searchReq.name" />
                 </el-col>
             </el-row>
         </template>
         <template #rightButton>
-            <el-button @click="sync" type="primary" link v-if="mode === 'installed' && data != null">
+            <el-button @click="sync" type="primary" plain v-if="mode === 'installed' && data != null">
                 {{ $t('app.sync') }}
             </el-button>
-            <el-button @click="openIngore" type="primary" link v-if="mode === 'upgrade'">
+            <el-button @click="openIgnore" type="primary" plain v-if="mode === 'upgrade'">
                 {{ $t('app.showIgnore') }}
             </el-button>
         </template>
 
         <template #main>
             <el-alert type="info" :closable="false" v-if="mode === 'installed'">
-                <template #default>
-                    {{ $t('app.installHelper') }}
-                    <el-link class="ml-5" icon="Position" @click="quickJump()" type="primary">
-                        {{ $t('firewall.quickJump') }}
-                    </el-link>
+                <template #title>
+                    <span class="flx-align-center">
+                        {{ $t('app.installHelper') }}
+                        <el-link class="ml-5" icon="Position" @click="quickJump()" type="primary">
+                            {{ $t('firewall.quickJump') }}
+                        </el-link>
+                        　
+                    </span>
                 </template>
             </el-alert>
             <el-alert type="info" :title="$t('app.upgradeHelper')" :closable="false" v-if="mode === 'upgrade'" />
@@ -157,8 +149,8 @@
                                                     placement="top"
                                                 >
                                                     <el-button
-                                                        link
                                                         type="primary"
+                                                        link
                                                         @click="openLog(installed)"
                                                         :disabled="installed.status === 'DownloadErr'"
                                                     >
@@ -169,7 +161,6 @@
 
                                             <el-button
                                                 class="h-button"
-                                                type="primary"
                                                 plain
                                                 round
                                                 size="small"
@@ -184,7 +175,6 @@
                                             </el-button>
                                             <el-button
                                                 class="h-button"
-                                                type="primary"
                                                 plain
                                                 round
                                                 size="small"
@@ -199,7 +189,6 @@
                                             </el-button>
                                             <el-button
                                                 class="h-button"
-                                                type="primary"
                                                 plain
                                                 round
                                                 size="small"
@@ -210,7 +199,6 @@
                                             </el-button>
                                             <el-button
                                                 class="h-button"
-                                                type="primary"
                                                 plain
                                                 round
                                                 size="small"
@@ -226,25 +214,32 @@
                                             </el-button>
                                         </div>
                                         <div class="d-description">
-                                            <el-tag class="middle-center">
+                                            <el-button class="tagMargin" plain size="small">
                                                 {{ $t('app.version') }}：{{ installed.version }}
-                                            </el-tag>
-                                            <el-tag
-                                                class="middle-center"
+                                            </el-button>
+
+                                            <el-button
                                                 v-if="installed.httpPort > 0"
                                                 @click="goDashboard(installed.httpPort, 'http')"
+                                                class="tagMargin"
+                                                icon="Position"
+                                                plain
+                                                size="small"
                                             >
-                                                <el-icon class="middle-center"><Position /></el-icon>
                                                 {{ $t('app.busPort') }}：{{ installed.httpPort }}
-                                            </el-tag>
-                                            <el-tag
-                                                class="middle-center"
+                                            </el-button>
+
+                                            <el-button
                                                 v-if="installed.httpsPort > 0"
                                                 @click="goDashboard(installed.httpsPort, 'https')"
+                                                class="tagMargin"
+                                                icon="Position"
+                                                plain
+                                                size="small"
                                             >
-                                                <el-icon class="middle-center"><Position /></el-icon>
                                                 {{ $t('app.busPort') }}：{{ installed.httpsPort }}
-                                            </el-tag>
+                                            </el-button>
+
                                             <div class="description">
                                                 <span>
                                                     {{ $t('app.alreadyRun') }}： {{ getAge(installed.createdAt) }}
@@ -259,9 +254,7 @@
                                             <el-button
                                                 v-for="(button, key) in buttons"
                                                 :key="key"
-                                                :type="
-                                                    button.disabled && button.disabled(installed) ? 'info' : 'primary'
-                                                "
+                                                :type="button.disabled && button.disabled(installed) ? 'info' : ''"
                                                 plain
                                                 round
                                                 size="small"
@@ -457,7 +450,7 @@ const openOperate = (row: any, op: string) => {
     }
 };
 
-const openIngore = () => {
+const openIgnore = () => {
     ignoreRef.value.acceptParams();
 };
 
@@ -468,6 +461,9 @@ const operate = async () => {
         .then(() => {
             MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
             search();
+            setTimeout(() => {
+                search();
+            }, 1500);
         })
         .catch(() => {
             search();
@@ -609,7 +605,7 @@ onMounted(() => {
     search();
     timer = setInterval(() => {
         search();
-    }, 10000 * 6);
+    }, 1000 * 60);
 });
 
 onUnmounted(() => {

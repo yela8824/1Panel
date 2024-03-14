@@ -52,6 +52,8 @@ type SettingInfo struct {
 	AppStoreSyncStatus   string `json:"appStoreSyncStatus"`
 
 	FileRecycleBin string `json:"fileRecycleBin"`
+
+	SnapshotIgnore string `json:"snapshotIgnore"`
 }
 
 type SettingUpdate struct {
@@ -60,7 +62,7 @@ type SettingUpdate struct {
 }
 
 type SSLUpdate struct {
-	SSLType string `json:"sslType" validate:"required,oneof=self select import-paste import-local"`
+	SSLType string `json:"sslType" validate:"required,oneof=self select import import-paste import-local"`
 	Domain  string `json:"domain"`
 	SSL     string `json:"ssl" validate:"required,oneof=enable disable"`
 	Cert    string `json:"cert"`
@@ -99,9 +101,10 @@ type SnapshotStatus struct {
 }
 
 type SnapshotCreate struct {
-	ID          uint   `json:"id"`
-	From        string `json:"from" validate:"required,oneof=OSS S3 SFTP MINIO COS KODO OneDrive WebDAV"`
-	Description string `json:"description" validate:"max=256"`
+	ID              uint   `json:"id"`
+	From            string `json:"from" validate:"required"`
+	DefaultDownload string `json:"defaultDownload" validate:"required"`
+	Description     string `json:"description" validate:"max=256"`
 }
 type SnapshotRecover struct {
 	IsNew      bool `json:"isNew"`
@@ -114,14 +117,15 @@ type SnapshotImport struct {
 	Description string   `json:"description" validate:"max=256"`
 }
 type SnapshotInfo struct {
-	ID          uint      `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description" validate:"max=256"`
-	From        string    `json:"from"`
-	Status      string    `json:"status"`
-	Message     string    `json:"message"`
-	CreatedAt   time.Time `json:"createdAt"`
-	Version     string    `json:"version"`
+	ID              uint      `json:"id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description" validate:"max=256"`
+	From            string    `json:"from"`
+	DefaultDownload string    `json:"defaultDownload"`
+	Status          string    `json:"status"`
+	Message         string    `json:"message"`
+	CreatedAt       time.Time `json:"createdAt"`
+	Version         string    `json:"version"`
 
 	InterruptStep    string `json:"interruptStep"`
 	RecoverStatus    string `json:"recoverStatus"`

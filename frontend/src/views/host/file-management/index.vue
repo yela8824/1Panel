@@ -43,8 +43,8 @@
         <LayoutContent :title="$t('file.file')" v-loading="loading">
             <template #prompt>
                 <el-alert type="info" :closable="false">
-                    <template #default>
-                        <span><span v-html="$t('file.fileHeper')"></span></span>
+                    <template #title>
+                        <span v-html="$t('file.fileHeper')"></span>
                     </template>
                 </el-alert>
             </template>
@@ -224,19 +224,19 @@
                     </el-table-column>
                     <el-table-column :label="$t('file.mode')" prop="mode" max-width="50">
                         <template #default="{ row }">
-                            <el-link :underline="false" @click="openMode(row)" type="primary">{{ row.mode }}</el-link>
+                            <el-link :underline="false" @click="openMode(row)">{{ row.mode }}</el-link>
                         </template>
                     </el-table-column>
                     <el-table-column :label="$t('commons.table.user')" prop="user" show-overflow-tooltip>
                         <template #default="{ row }">
-                            <el-link :underline="false" @click="openChown(row)" type="primary">
+                            <el-link :underline="false" @click="openChown(row)">
                                 {{ row.user ? row.user : '-' }} ({{ row.uid }})
                             </el-link>
                         </template>
                     </el-table-column>
                     <el-table-column :label="$t('file.group')" prop="group">
                         <template #default="{ row }">
-                            <el-link :underline="false" @click="openChown(row)" type="primary">
+                            <el-link :underline="false" @click="openChown(row)">
                                 {{ row.group ? row.group : '-' }} ({{ row.gid }})
                             </el-link>
                         </template>
@@ -499,11 +499,13 @@ const back = () => {
 
 const jump = async (url: string) => {
     const oldUrl = req.path;
+    const oldPageSize = req.pageSize;
     // reset search params before exec jump
     Object.assign(req, initData());
     req.path = url;
     req.containSub = false;
     req.search = '';
+    req.pageSize = oldPageSize;
     let searchResult = await searchFile();
 
     globalStore.setLastFilePath(req.path);
@@ -539,10 +541,10 @@ const getPaths = (reqPath: string) => {
     }
 };
 
-const handleCreate = (commnad: string) => {
+const handleCreate = (command: string) => {
     fileCreate.path = req.path;
     fileCreate.isDir = false;
-    if (commnad === 'dir') {
+    if (command === 'dir') {
         fileCreate.isDir = true;
     }
     createRef.value.acceptParams(fileCreate);

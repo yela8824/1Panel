@@ -21,7 +21,11 @@
                             :stroke-width="12"
                             :percentage="uploadPercent"
                         ></el-progress>
-                        <div v-if="type === 'mysql'" style="width: 80%" class="el-upload__tip">
+                        <div
+                            v-if="type === 'mysql' || type === 'mariadb' || type === 'postgresql'"
+                            style="width: 80%"
+                            class="el-upload__tip"
+                        >
                             <span class="input-help">{{ $t('database.supportUpType') }}</span>
                             <span class="input-help">
                                 {{ $t('database.zipFormat') }}
@@ -86,7 +90,6 @@
 <script lang="ts" setup>
 import { reactive, ref } from 'vue';
 import { computeSize } from '@/utils/util';
-import OpDialog from '@/components/del-dialog/index.vue';
 import { handleRecoverByUpload } from '@/api/modules/setting';
 import i18n from '@/lang';
 import { UploadFile, UploadFiles, UploadInstance } from 'element-plus';
@@ -130,17 +133,24 @@ const acceptParams = async (params: DialogProps): Promise<void> => {
     remark.value = params.remark;
 
     const pathRes = await loadBaseDir();
-    if (type.value === 'mysql') {
-        title.value = name.value + ' [ ' + detailName.value + ' ]';
-    }
-    if (type.value === 'website' || type.value === 'app') {
-        title.value = name.value;
-    }
-    let dir = type.value === 'mysql' || type.value === 'mariadb' ? 'database/' + type.value : type.value;
-    if (detailName.value) {
-        baseDir.value = `${pathRes.data}/uploads/${dir}/${name.value}/${detailName.value}/`;
-    } else {
-        baseDir.value = `${pathRes.data}/uploads/${dir}/${name.value}/`;
+    switch (type.value) {
+        case 'mysql':
+        case 'mariadb':
+        case 'postgresql':
+            title.value = name.value + ' [ ' + detailName.value + ' ]';
+            if (detailName.value) {
+                baseDir.value = `${pathRes.data}/uploads/database/${type.value}/${name.value}/${detailName.value}/`;
+            } else {
+                baseDir.value = `${pathRes.data}/uploads/database/${type.value}/${name.value}/`;
+            }
+            break;
+        case 'website':
+            title.value = name.value;
+            baseDir.value = `${pathRes.data}/uploads/database/${type.value}/${detailName.value}/`;
+            break;
+        case 'app':
+            title.value = name.value;
+            baseDir.value = `${pathRes.data}/uploads/database/${type.value}/${name.value}/`;
     }
     upVisible.value = true;
     search();
@@ -158,18 +168,21 @@ const search = async () => {
 };
 
 const onRecover = async (row: File.File) => {
-    let params = {
-        source: 'LOCAL',
-        type: type.value,
-        name: name.value,
-        detailName: detailName.value,
-        file: baseDir.value + row.name,
-    };
-    ElMessageBox.confirm(i18n.global.t('commons.msg.recoverHelper'), i18n.global.t('commons.button.recover'), {
-        confirmButtonText: i18n.global.t('commons.button.confirm'),
-        cancelButtonText: i18n.global.t('commons.button.cancel'),
-        type: 'info',
-    }).then(async () => {
+    ElMessageBox.confirm(
+        i18n.global.t('commons.msg.recoverHelper', [row.name]),
+        i18n.global.t('commons.button.recover'),
+        {
+            confirmButtonText: i18n.global.t('commons.button.confirm'),
+            cancelButtonText: i18n.global.t('commons.button.cancel'),
+        },
+    ).then(async () => {
+        let params = {
+            source: 'LOCAL',
+            type: type.value,
+            name: name.value,
+            detailName: detailName.value,
+            file: baseDir.value + row.name,
+        };
         loading.value = true;
         await handleRecoverByUpload(params)
             .then(() => {
@@ -308,16 +321,7 @@ const buttons = [
     {
         label: i18n.global.t('commons.button.recover'),
         click: (row: File.File) => {
-            if (type.value !== 'app') {
-                onRecover(row);
-            } else {
-                ElMessageBox.confirm(i18n.global.t('app.restoreWarn'), i18n.global.t('commons.button.recover'), {
-                    confirmButtonText: i18n.global.t('commons.button.confirm'),
-                    cancelButtonText: i18n.global.t('commons.button.cancel'),
-                }).then(async () => {
-                    onRecover(row);
-                });
-            }
+            onRecover(row);
         },
     },
     {

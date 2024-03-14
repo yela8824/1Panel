@@ -50,11 +50,23 @@
                         >
                             {{ $t('commons.button.set') }}
                         </el-button>
+                        <el-divider v-if="data.app === 'OpenResty'" direction="vertical" />
+                        <el-button
+                            v-if="data.app === 'OpenResty'"
+                            type="primary"
+                            @click="clear"
+                            link
+                            :disabled="
+                                data.status === 'Installing' || (data.status !== 'Running' && data.app === 'OpenResty')
+                            "
+                        >
+                            {{ $t('nginx.clearProxyCache') }}
+                        </el-button>
                     </span>
 
                     <span class="warn" v-if="key === 'openresty' && (httpPort != 80 || httpsPort != 443)">
                         <el-alert class="helper" type="error" :closable="false">
-                            {{ $t('website.openrestryHelper', [httpPort, httpsPort]) }}
+                            {{ $t('website.openrestyHelper', [httpPort, httpsPort]) }}
                         </el-alert>
                     </span>
                 </div>
@@ -64,15 +76,15 @@
             <LayoutContent :title="getTitle(key)" :divider="true">
                 <template #main>
                     <div class="app-warn">
-                        <div>
+                        <div class="flx-center">
                             <span>{{ $t('app.checkInstalledWarn', [data.app]) }}</span>
-                            <span @click="goRouter(key)">
+                            <span @click="goRouter(key)" class="flx-align-center">
                                 <el-icon class="ml-2"><Position /></el-icon>
                                 {{ $t('database.goInstall') }}
                             </span>
-                            <div>
-                                <img src="@/assets/images/no_app.svg" />
-                            </div>
+                        </div>
+                        <div>
+                            <img src="@/assets/images/no_app.svg" />
                         </div>
                     </div>
                 </template>
@@ -88,6 +100,7 @@ import Status from '@/components/status/index.vue';
 import { ElMessageBox } from 'element-plus';
 import i18n from '@/lang';
 import { MsgSuccess } from '@/utils/message';
+import { ClearNginxCache } from '@/api/modules/nginx';
 
 const props = defineProps({
     appKey: {
@@ -145,7 +158,7 @@ const goRouter = async (key: string) => {
 };
 
 const isDB = () => {
-    return key.value === 'mysql' || key.value === 'mariadb';
+    return key.value === 'mysql' || key.value === 'mariadb' || key.value === 'postgresql';
 };
 
 const onCheck = async () => {
@@ -162,6 +175,16 @@ const onCheck = async () => {
             em('isExist', false);
             refresh.value++;
         });
+};
+
+const clear = () => {
+    ElMessageBox.confirm(i18n.global.t('nginx.clearProxyCacheWarn'), i18n.global.t('nginx.clearProxyCache'), {
+        confirmButtonText: i18n.global.t('commons.button.confirm'),
+        cancelButtonText: i18n.global.t('commons.button.cancel'),
+    }).then(async () => {
+        await ClearNginxCache();
+        MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
+    });
 };
 
 const onOperate = async (operation: string) => {
@@ -201,6 +224,8 @@ const getTitle = (key: string) => {
             return i18n.global.t('website.website');
         case 'mysql':
             return 'MySQL ' + i18n.global.t('menu.database');
+        case 'postgresql':
+            return 'PostgreSQL ' + i18n.global.t('menu.database');
         case 'redis':
             return 'Redis ' + i18n.global.t('menu.database');
     }

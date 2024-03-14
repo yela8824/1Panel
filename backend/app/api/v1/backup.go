@@ -50,6 +50,17 @@ func (b *BaseApi) CreateBackup(c *gin.Context) {
 }
 
 // @Tags Backup Account
+// @Summary Refresh OneDrive token
+// @Description 刷新 OneDrive token
+// @Success 200
+// @Security ApiKeyAuth
+// @Router /settings/backup/refresh/onedrive [post]
+func (b *BaseApi) RefreshOneDriveToken(c *gin.Context) {
+	backupService.Run()
+	helper.SuccessWithData(c, nil)
+}
+
+// @Tags Backup Account
 // @Summary List buckets
 // @Description 获取 bucket 列表
 // @Accept json
@@ -91,16 +102,16 @@ func (b *BaseApi) ListBuckets(c *gin.Context) {
 // @Summary Load OneDrive info
 // @Description 获取 OneDrive 信息
 // @Accept json
-// @Success 200 string clientID
+// @Success 200 {object} dto.OneDriveInfo
 // @Security ApiKeyAuth
 // @Router /settings/backup/onedrive [get]
 func (b *BaseApi) LoadOneDriveInfo(c *gin.Context) {
-	clientID, err := backupService.LoadOneDriveInfo()
+	data, err := backupService.LoadOneDriveInfo()
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 		return
 	}
-	helper.SuccessWithData(c, clientID)
+	helper.SuccessWithData(c, data)
 }
 
 // @Tags Backup Account
@@ -140,6 +151,32 @@ func (b *BaseApi) SearchBackupRecords(c *gin.Context) {
 	}
 
 	total, list, err := backupService.SearchRecordsWithPage(req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+		return
+	}
+
+	helper.SuccessWithData(c, dto.PageResult{
+		Items: list,
+		Total: total,
+	})
+}
+
+// @Tags Backup Account
+// @Summary Page backup records by cronjob
+// @Description 通过计划任务获取备份记录列表分页
+// @Accept json
+// @Param request body dto.RecordSearchByCronjob true "request"
+// @Success 200
+// @Security ApiKeyAuth
+// @Router /settings/backup/record/search/bycronjob [post]
+func (b *BaseApi) SearchBackupRecordsByCronjob(c *gin.Context) {
+	var req dto.RecordSearchByCronjob
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
+		return
+	}
+
+	total, list, err := backupService.SearchRecordsByCronjobWithPage(req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 		return
@@ -265,12 +302,7 @@ func (b *BaseApi) LoadFilesFromBackup(c *gin.Context) {
 		return
 	}
 
-	data, err := backupService.ListFiles(req)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
-		return
-	}
-
+	data := backupService.ListFiles(req)
 	helper.SuccessWithData(c, data)
 }
 
@@ -281,7 +313,7 @@ func (b *BaseApi) LoadFilesFromBackup(c *gin.Context) {
 // @Param request body dto.CommonBackup true "request"
 // @Success 200
 // @Security ApiKeyAuth
-// @Router /settings/backup/ [post]
+// @Router /settings/backup/backup [post]
 // @x-panel-log {"bodyKeys":["type","name","detailName"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"备份 [type] 数据 [name][detailName]","formatEN":"backup [type] data [name][detailName]"}
 func (b *BaseApi) Backup(c *gin.Context) {
 	var req dto.CommonBackup
@@ -297,6 +329,11 @@ func (b *BaseApi) Backup(c *gin.Context) {
 		}
 	case "mysql", "mariadb":
 		if err := backupService.MysqlBackup(req); err != nil {
+			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+			return
+		}
+	case constant.AppPostgresql:
+		if err := backupService.PostgresqlBackup(req); err != nil {
 			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 			return
 		}
@@ -329,17 +366,20 @@ func (b *BaseApi) Recover(c *gin.Context) {
 		return
 	}
 
-	if req.Source != "LOCAL" {
-		downloadPath, err := backupService.DownloadRecord(dto.DownloadRecord{Source: req.Source, FileDir: path.Dir(req.File), FileName: path.Base(req.File)})
-		if err != nil {
-			helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, fmt.Errorf("download file failed, err: %v", err))
-			return
-		}
-		req.File = downloadPath
+	downloadPath, err := backupService.DownloadRecord(dto.DownloadRecord{Source: req.Source, FileDir: path.Dir(req.File), FileName: path.Base(req.File)})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, fmt.Errorf("download file failed, err: %v", err))
+		return
 	}
+	req.File = downloadPath
 	switch req.Type {
 	case "mysql", "mariadb":
 		if err := backupService.MysqlRecover(req); err != nil {
+			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+			return
+		}
+	case constant.AppPostgresql:
+		if err := backupService.PostgresqlRecover(req); err != nil {
 			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 			return
 		}
@@ -380,6 +420,11 @@ func (b *BaseApi) RecoverByUpload(c *gin.Context) {
 	switch req.Type {
 	case "mysql", "mariadb":
 		if err := backupService.MysqlRecoverByUpload(req); err != nil {
+			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+			return
+		}
+	case constant.AppPostgresql:
+		if err := backupService.PostgresqlRecoverByUpload(req); err != nil {
 			helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 			return
 		}

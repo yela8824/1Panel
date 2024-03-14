@@ -8,9 +8,9 @@
                 <el-col :span="22">
                     <el-form ref="hostInfoRef" label-position="top" :model="dialogData.rowData" :rules="rules">
                         <el-form-item :label="$t('terminal.ip')" prop="addr">
-                            <span v-if="dialogData.rowData!.addr === '127.0.0.1' && dialogData.title === 'edit'">
+                            <el-tag v-if="dialogData.rowData!.addr === '127.0.0.1' && dialogData.title === 'edit'">
                                 {{ dialogData.rowData!.addr }}
-                            </span>
+                            </el-tag>
                             <el-input @change="isOK = false" v-else clearable v-model.trim="dialogData.rowData!.addr" />
                         </el-form-item>
                         <el-form-item :label="$t('commons.login.username')" prop="user">
@@ -18,8 +18,8 @@
                         </el-form-item>
                         <el-form-item :label="$t('terminal.authMode')" prop="authMode">
                             <el-radio-group @change="isOK = false" v-model="dialogData.rowData!.authMode">
-                                <el-radio label="password">{{ $t('terminal.passwordMode') }}</el-radio>
-                                <el-radio label="key">{{ $t('terminal.keyMode') }}</el-radio>
+                                <el-radio value="password">{{ $t('terminal.passwordMode') }}</el-radio>
+                                <el-radio value="key">{{ $t('terminal.keyMode') }}</el-radio>
                             </el-radio-group>
                         </el-form-item>
                         <el-form-item

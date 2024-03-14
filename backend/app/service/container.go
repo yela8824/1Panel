@@ -15,6 +15,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode/utf8"
+
+	"github.com/pkg/errors"
 
 	"github.com/1Panel-dev/1Panel/backend/app/dto"
 	"github.com/1Panel-dev/1Panel/backend/buserr"
@@ -89,10 +92,21 @@ func (u *ContainerService) Page(req dto.PageContainer) (int64, interface{}, erro
 		options.Filters = filters.NewArgs()
 		options.Filters.Add("label", req.Filters)
 	}
-	list, err = client.ContainerList(context.Background(), options)
+	containers, err := client.ContainerList(context.Background(), options)
 	if err != nil {
 		return 0, nil, err
 	}
+	if req.ExcludeAppStore {
+		for _, item := range containers {
+			if created, ok := item.Labels[composeCreatedBy]; ok && created == "Apps" {
+				continue
+			}
+			list = append(list, item)
+		}
+	} else {
+		list = containers
+	}
+
 	if len(req.Name) != 0 {
 		length, count := len(list), 0
 		for count < length {
@@ -162,7 +176,7 @@ func (u *ContainerService) Page(req dto.PageContainer) (int64, interface{}, erro
 		}
 
 		ports := loadContainerPort(item.Ports)
-		backDatas[i] = dto.ContainerInfo{
+		info := dto.ContainerInfo{
 			ContainerID:   item.ID,
 			CreateTime:    time.Unix(item.Created, 0).Format("2006-01-02 15:04:05"),
 			Name:          item.Names[0][1:],
@@ -174,6 +188,16 @@ func (u *ContainerService) Page(req dto.PageContainer) (int64, interface{}, erro
 			IsFromApp:     IsFromApp,
 			IsFromCompose: IsFromCompose,
 		}
+		install, _ := appInstallRepo.GetFirst(appInstallRepo.WithContainerName(info.Name))
+		if install.ID > 0 {
+			info.AppInstallName = install.Name
+			info.AppName = install.App.Name
+			websites, _ := websiteRepo.GetBy(websiteRepo.WithAppInstallId(install.ID))
+			for _, website := range websites {
+				info.Websites = append(info.Websites, website.PrimaryDomain)
+			}
+		}
+		backDatas[i] = info
 		if item.NetworkSettings != nil && len(item.NetworkSettings.Networks) > 0 {
 			networks := make([]string, 0, len(item.NetworkSettings.Networks))
 			for key := range item.NetworkSettings.Networks {
@@ -313,7 +337,7 @@ func (u *ContainerService) LoadResourceLimit() (*dto.ResourceLimit, error) {
 
 	data := dto.ResourceLimit{
 		CPU:    cpuCounts,
-		Memory: int(memoryInfo.Total),
+		Memory: memoryInfo.Total,
 	}
 	return &data, nil
 }
@@ -411,7 +435,7 @@ func (u *ContainerService) ContainerInfo(req dto.OperationWithName) (*dto.Contai
 	data.AutoRemove = oldContainer.HostConfig.AutoRemove
 	data.Privileged = oldContainer.HostConfig.Privileged
 	data.PublishAllPorts = oldContainer.HostConfig.PublishAllPorts
-	data.RestartPolicy = oldContainer.HostConfig.RestartPolicy.Name
+	data.RestartPolicy = string(oldContainer.HostConfig.RestartPolicy.Name)
 	if oldContainer.HostConfig.NanoCPUs != 0 {
 		data.NanoCPUs = float64(oldContainer.HostConfig.NanoCPUs) / 1000000000
 	}
@@ -616,6 +640,9 @@ func (u *ContainerService) ContainerLogs(wsConn *websocket.Conn, containerType, 
 	cmd := exec.Command("bash", "-c", command)
 	if !follow {
 		stdout, _ := cmd.CombinedOutput()
+		if !utf8.Valid(stdout) {
+			return errors.New("invalid utf8")
+		}
 		if err := wsConn.WriteMessage(websocket.TextMessage, stdout); err != nil {
 			global.LOG.Errorf("send message with log to ws failed, err: %v", err)
 		}
@@ -657,6 +684,9 @@ func (u *ContainerService) ContainerLogs(wsConn *websocket.Conn, containerType, 
 				global.LOG.Errorf("read bytes from log failed, err: %v", err)
 				continue
 			}
+			if !utf8.Valid(buffer[:n]) {
+				continue
+			}
 			if err = wsConn.WriteMessage(websocket.TextMessage, buffer[:n]); err != nil {
 				global.LOG.Errorf("send message with log to ws failed, err: %v", err)
 				return err
@@ -693,7 +723,6 @@ func (u *ContainerService) ContainerStats(id string) (*dto.ContainerStats, error
 	if cache, ok := stats.MemoryStats.Stats["cache"]; ok {
 		data.Cache = float64(cache) / 1024 / 1024
 	}
-	data.Memory = data.Memory - data.Cache
 	data.NetworkRX, data.NetworkTX = calculateNetwork(stats.Networks)
 	data.ShotTime = stats.Read
 	return &data, nil
@@ -761,7 +790,7 @@ func calculateCPUPercentUnix(stats *types.StatsJSON) float64 {
 }
 func calculateMemPercentUnix(memStats types.MemoryStats) float64 {
 	memPercent := 0.0
-	memUsage := float64(memStats.Usage - memStats.Stats["cache"])
+	memUsage := float64(memStats.Usage)
 	memLimit := float64(memStats.Limit)
 	if memUsage > 0.0 && memLimit > 0.0 {
 		memPercent = (memUsage / memLimit) * 100.0
@@ -865,6 +894,7 @@ func loadCpuAndMem(client *client.Client, container string) dto.ContainerListSta
 	data.MemoryCache = stats.MemoryStats.Stats["cache"]
 	data.MemoryUsage = stats.MemoryStats.Usage
 	data.MemoryLimit = stats.MemoryStats.Limit
+
 	data.MemoryPercent = calculateMemPercentUnix(stats.MemoryStats)
 	return data
 }
@@ -955,7 +985,7 @@ func loadConfigInfo(isCreate bool, req dto.ContainerOperate, oldContainer *types
 	hostConf.AutoRemove = req.AutoRemove
 	hostConf.CPUShares = req.CPUShares
 	hostConf.PublishAllPorts = req.PublishAllPorts
-	hostConf.RestartPolicy = container.RestartPolicy{Name: req.RestartPolicy}
+	hostConf.RestartPolicy = container.RestartPolicy{Name: container.RestartPolicyMode(req.RestartPolicy)}
 	if req.RestartPolicy == "on-failure" {
 		hostConf.RestartPolicy.MaximumRetryCount = 5
 	}

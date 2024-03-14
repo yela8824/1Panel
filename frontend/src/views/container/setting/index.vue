@@ -38,8 +38,8 @@
         <LayoutContent style="margin-top: 20px" :title="$t('container.setting')" :divider="true">
             <template #main>
                 <el-radio-group v-model="confShowType" @change="changeMode">
-                    <el-radio-button label="base">{{ $t('database.baseConf') }}</el-radio-button>
-                    <el-radio-button label="all">{{ $t('database.allConf') }}</el-radio-button>
+                    <el-radio-button value="base">{{ $t('database.baseConf') }}</el-radio-button>
+                    <el-radio-button value="all">{{ $t('database.allConf') }}</el-radio-button>
                 </el-radio-group>
                 <el-row style="margin-top: 20px" v-if="confShowType === 'base'">
                     <el-col :span="1"><br /></el-col>
@@ -49,7 +49,7 @@
                                 <div style="width: 100%" v-if="form.mirrors">
                                     <el-input
                                         type="textarea"
-                                        :autosize="{ minRows: 3, maxRows: 5 }"
+                                        :rows="5"
                                         disabled
                                         v-model="form.mirrors"
                                         style="width: calc(100% - 80px)"
@@ -66,7 +66,7 @@
                                     </template>
                                 </el-input>
                                 <span class="input-help">{{ $t('container.mirrorsHelper') }}</span>
-                                <span class="input-help">
+                                <span class="input-help flx-align-center" style="display: flex">
                                     {{ $t('container.mirrorsHelper2') }}
                                     <el-link
                                         style="font-size: 12px; margin-left: 5px"
@@ -82,7 +82,7 @@
                                 <div style="width: 100%" v-if="form.registries">
                                     <el-input
                                         type="textarea"
-                                        :autosize="{ minRows: 3, maxRows: 5 }"
+                                        :rows="5"
                                         disabled
                                         v-model="form.registries"
                                         style="width: calc(100% - 80px)"
@@ -146,8 +146,8 @@
                             </el-form-item>
                             <el-form-item label="cgroup-driver" prop="cgroupDriver">
                                 <el-radio-group v-model="form.cgroupDriver" @change="handleCgroup">
-                                    <el-radio label="cgroupfs">cgroupfs</el-radio>
-                                    <el-radio label="systemd">systemd</el-radio>
+                                    <el-radio value="cgroupfs">cgroupfs</el-radio>
+                                    <el-radio value="systemd">systemd</el-radio>
                                 </el-radio-group>
                             </el-form-item>
                             <el-form-item :label="$t('container.sockPath')" prop="dockerSockPath">
@@ -414,7 +414,7 @@ const handleCgroup = async () => {
     confirmDialogRefCgroup.value!.acceptParams(params);
 };
 const onSubmitSaveCgroup = () => {
-    save('Dirver', form.cgroupDriver);
+    save('Driver', form.cgroupDriver);
 };
 
 const save = async (key: string, value: string) => {

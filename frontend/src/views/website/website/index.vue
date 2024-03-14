@@ -32,23 +32,13 @@
                         </el-button>
                     </el-col>
                     <el-col :xs="24" :sm="4" :md="4" :lg="4" :xl="4">
-                        <div class="search-button">
-                            <el-input
-                                v-model="req.name"
-                                clearable
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
+                        <TableSearch @search="search()" v-model:searchName="req.name" />
                     </el-col>
                 </el-row>
             </template>
             <template v-if="nginxIsExist && !openNginxConfig" #search>
                 <div :class="{ mask: nginxStatus != 'Running' }">
-                    <el-select v-model="req.websiteGroupId" @change="search()">
+                    <el-select v-model="req.websiteGroupId" @change="search()" class="p-w-200">
                         <template #prefix>{{ $t('website.group') }}</template>
                         <el-option :label="$t('commons.table.all')" :value="0"></el-option>
                         <el-option
@@ -185,7 +175,6 @@
 </template>
 
 <script lang="ts" setup>
-import Tooltip from '@/components/tooltip/index.vue';
 import Backups from '@/components/backup/index.vue';
 import UploadDialog from '@/components/upload/index.vue';
 import DefaultServer from '@/views/website/website/default/index.vue';
@@ -379,7 +368,7 @@ const buttons = [
             let params = {
                 type: 'website',
                 name: row.primaryDomain,
-                detailName: '',
+                detailName: row.alias,
             };
             dialogBackupRef.value!.acceptParams(params);
         },
@@ -390,7 +379,7 @@ const buttons = [
             let params = {
                 type: 'website',
                 name: row.primaryDomain,
-                detailName: '',
+                detailName: row.alias,
             };
             uploadRef.value!.acceptParams(params);
         },
@@ -451,9 +440,3 @@ onMounted(() => {
     listGroup();
 });
 </script>
-<style lang="scss" scoped>
-.search-button {
-    float: right;
-    display: inline;
-}
-</style>

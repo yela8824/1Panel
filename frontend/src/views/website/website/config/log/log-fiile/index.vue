@@ -5,15 +5,15 @@
                 <el-switch v-model="data.enable" @change="updateEnable"></el-switch>
             </el-form-item>
         </div>
-        <LogFile :config="{ id: id, type: 'website', name: logType }" :style="style">
+        <LogFile :config="{ id: id, type: 'website', name: logType }" :style="style" ref="logRef">
             <template #button>
-                <el-button @click="cleanLog" icon="Delete" :disabled="data.content === ''">
+                <el-button @click="cleanLog" icon="Delete">
                     {{ $t('commons.button.clean') }}
                 </el-button>
             </template>
         </LogFile>
     </div>
-    <OpDialog ref="opRef" />
+    <OpDialog ref="opRef" @search="clearLog" />
 </template>
 <script lang="ts" setup>
 import { computed, onMounted, ref } from 'vue';
@@ -38,7 +38,7 @@ const logType = computed(() => {
 const id = computed(() => {
     return props.id;
 });
-const style = ref('height: calc(100vh - 400px); width: 100%; min-height: 400px');
+const style = ref('height: calc(100vh - 402px); width: 100%; min-height: 300px');
 const loading = ref(false);
 const data = ref({
     enable: false,
@@ -46,6 +46,7 @@ const data = ref({
     path: '',
 });
 const opRef = ref();
+const logRef = ref();
 
 const updateEnable = () => {
     const operate = data.value.enable ? 'enable' : 'disable';
@@ -62,6 +63,10 @@ const updateEnable = () => {
         .finally(() => {
             loading.value = false;
         });
+};
+
+const clearLog = () => {
+    logRef.value.clearLog();
 };
 
 const cleanLog = async () => {

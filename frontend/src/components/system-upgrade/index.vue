@@ -9,6 +9,10 @@
                 <span>{{ $t('setting.doc2') }}</span>
             </el-button>
             <el-divider direction="vertical" />
+            <el-button type="primary" link @click="toGithub">
+                <span>{{ $t('setting.project') }}</span>
+            </el-button>
+            <el-divider direction="vertical" />
         </span>
         <span class="version">{{ $t('setting.currentVersion') + version }}</span>
         <el-badge is-dot class="item" v-if="version !== 'Waiting' && globalStore.hasNewVersion">
@@ -32,18 +36,18 @@
         </template>
         <div class="panel-MdEditor">
             <el-alert :closable="false">
-                <span class="line-heigth">{{ $t('setting.versionHelper') }}</span>
-                <li class="line-heigth">{{ $t('setting.versionHelper1') }}</li>
-                <li class="line-heigth">{{ $t('setting.versionHelper2') }}</li>
+                <span class="line-height">{{ $t('setting.versionHelper') }}</span>
+                <li class="line-height">{{ $t('setting.versionHelper1') }}</li>
+                <li class="line-height">{{ $t('setting.versionHelper2') }}</li>
             </el-alert>
             <div class="default-theme" style="margin-left: 20px">
                 <h2 class="inline-block">{{ $t('app.version') }}</h2>
             </div>
             <el-radio-group class="inline-block tag" v-model="upgradeVersion" @change="changeOption">
-                <el-radio v-if="upgradeInfo.newVersion" :label="upgradeInfo.newVersion">
+                <el-radio v-if="upgradeInfo.newVersion" :value="upgradeInfo.newVersion">
                     {{ upgradeInfo.newVersion }} {{ $t('setting.newVersion') }}
                 </el-radio>
-                <el-radio :label="upgradeInfo.latestVersion">
+                <el-radio :value="upgradeInfo.latestVersion">
                     {{ upgradeInfo.latestVersion }} {{ $t('setting.latestVersion') }}
                 </el-radio>
             </el-radio-group>
@@ -73,7 +77,7 @@ import { GlobalStore } from '@/store';
 import { ElMessageBox } from 'element-plus';
 const globalStore = GlobalStore();
 
-const version = ref();
+const version = ref<string>('');
 const loading = ref(false);
 const drawerVisible = ref(false);
 const upgradeInfo = ref();
@@ -101,6 +105,10 @@ const toDoc = () => {
 
 const toForum = () => {
     window.open('https://bbs.fit2cloud.com/c/1p/7', '_blank');
+};
+
+const toGithub = () => {
+    window.open('https://github.com/1Panel-dev/1Panel', '_blank', 'noopener,noreferrer');
 };
 
 const onLoadUpgradeInfo = async () => {
@@ -153,7 +161,7 @@ onMounted(() => {
     text-decoration: none;
     letter-spacing: 0.5px;
 }
-.line-heigth {
+.line-height {
     line-height: 25px;
 }
 .panel-MdEditor {

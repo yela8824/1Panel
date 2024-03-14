@@ -21,18 +21,24 @@ type BackupInfo struct {
 	Vars       string    `json:"vars"`
 }
 
+type OneDriveInfo struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RedirectUri  string `json:"redirect_uri"`
+}
+
 type BackupSearchFile struct {
 	Type string `json:"type" validate:"required"`
 }
 
 type CommonBackup struct {
-	Type       string `json:"type" validate:"required,oneof=app mysql mariadb redis website"`
+	Type       string `json:"type" validate:"required,oneof=app mysql mariadb redis website postgresql"`
 	Name       string `json:"name"`
 	DetailName string `json:"detailName"`
 }
 type CommonRecover struct {
 	Source     string `json:"source" validate:"required,oneof=OSS S3 SFTP MINIO LOCAL COS KODO OneDrive WebDAV"`
-	Type       string `json:"type" validate:"required,oneof=app mysql mariadb redis website"`
+	Type       string `json:"type" validate:"required,oneof=app mysql mariadb redis website postgresql"`
 	Name       string `json:"name"`
 	DetailName string `json:"detailName"`
 	File       string `json:"file"`
@@ -43,6 +49,11 @@ type RecordSearch struct {
 	Type       string `json:"type" validate:"required"`
 	Name       string `json:"name"`
 	DetailName string `json:"detailName"`
+}
+
+type RecordSearchByCronjob struct {
+	PageInfo
+	CronjobID uint `json:"cronjobID" validate:"required"`
 }
 
 type BackupRecords struct {

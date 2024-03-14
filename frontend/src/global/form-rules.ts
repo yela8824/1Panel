@@ -171,7 +171,7 @@ const checkDBName = (rule: any, value: any, callback: any) => {
     if (value === '' || typeof value === 'undefined' || value == null) {
         callback(new Error(i18n.global.t('commons.rule.dbName')));
     } else {
-        const reg = /^[a-zA-Z0-9\u4e00-\u9fa5]{1}[a-zA-Z0-9_.\u4e00-\u9fa5-]{0,64}$/;
+        const reg = /^[a-zA-Z0-9\u4e00-\u9fa5]{1}[a-zA-Z0-9_.\u4e00-\u9fa5-]{0,63}$/;
         if (!reg.test(value) && value !== '') {
             callback(new Error(i18n.global.t('commons.rule.dbName')));
         } else {
@@ -413,7 +413,7 @@ const checkContainerName = (rule: any, value: any, callback: any) => {
     if (value === '' || typeof value === 'undefined' || value == null) {
         callback();
     } else {
-        const reg = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,127}$/;
+        const reg = /^[a-zA-Z0-9]{1}[a-zA-Z0-9_.-]{1,127}$/;
         if (!reg.test(value) && value !== '') {
             callback(new Error(i18n.global.t('commons.rule.containerName')));
         } else {
@@ -474,6 +474,32 @@ const checkFilePermission = (rule, value, callback) => {
     }
 };
 
+const checkPHPExtensions = (rule, value, callback) => {
+    if (value === '' || typeof value === 'undefined' || value == null) {
+        callback(new Error(i18n.global.t('commons.rule.phpExtension')));
+    } else {
+        const reg = /^[a-z0-9,_]+$/;
+        if (!reg.test(value)) {
+            callback(new Error(i18n.global.t('commons.rule.phpExtension')));
+        } else {
+            callback();
+        }
+    }
+};
+
+const checkHttpOrHttps = (rule, value, callback) => {
+    if (value === '' || typeof value === 'undefined' || value == null) {
+        callback(new Error(i18n.global.t('commons.rule.paramHttp')));
+    } else {
+        const regHttpHttps = /^(http|https):\/\//;
+        if (!regHttpHttps.test(value)) {
+            callback(new Error(i18n.global.t('commons.rule.paramHttp')));
+        } else {
+            callback();
+        }
+    }
+};
+
 interface CommonRule {
     requiredInput: FormItemRule;
     requiredSelect: FormItemRule;
@@ -507,12 +533,14 @@ interface CommonRule {
     leechExts: FormItemRule;
     domainWithPort: FormItemRule;
     filePermission: FormItemRule;
+    phpExtensions: FormItemRule;
 
     paramCommon: FormItemRule;
     paramComplexity: FormItemRule;
     paramPort: FormItemRule;
     paramExtUrl: FormItemRule;
     paramSimple: FormItemRule;
+    paramHttp: FormItemRule;
 }
 
 export const Rules: CommonRule = {
@@ -709,6 +737,16 @@ export const Rules: CommonRule = {
     filePermission: {
         required: true,
         validator: checkFilePermission,
+        trigger: 'blur',
+    },
+    phpExtensions: {
+        required: true,
+        validator: checkPHPExtensions,
+        trigger: 'blur',
+    },
+    paramHttp: {
+        required: true,
+        validator: checkHttpOrHttps,
         trigger: 'blur',
     },
 };

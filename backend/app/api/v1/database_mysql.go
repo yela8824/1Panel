@@ -42,6 +42,37 @@ func (b *BaseApi) CreateMysql(c *gin.Context) {
 }
 
 // @Tags Database Mysql
+// @Summary Bind user of mysql database
+// @Description 绑定 mysql 数据库用户
+// @Accept json
+// @Param request body dto.BindUser true "request"
+// @Success 200
+// @Security ApiKeyAuth
+// @Router /databases/bind [post]
+// @x-panel-log {"bodyKeys":["database", "username"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"绑定 mysql 数据库名 [database] [username]","formatEN":"bind mysql database [database] [username]"}
+func (b *BaseApi) BindUser(c *gin.Context) {
+	var req dto.BindUser
+	if err := helper.CheckBindAndValidate(&req, c); err != nil {
+		return
+	}
+
+	if len(req.Password) != 0 {
+		password, err := base64.StdEncoding.DecodeString(req.Password)
+		if err != nil {
+			helper.ErrorWithDetail(c, constant.CodeErrBadRequest, constant.ErrTypeInvalidParams, err)
+			return
+		}
+		req.Password = string(password)
+	}
+
+	if err := mysqlService.BindUser(req); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
+		return
+	}
+	helper.SuccessWithData(c, nil)
+}
+
+// @Tags Database Mysql
 // @Summary Update mysql database description
 // @Description 更新 mysql 数据库库描述信息
 // @Accept json
@@ -135,29 +166,6 @@ func (b *BaseApi) UpdateMysqlVariables(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
 		return
 	}
-	helper.SuccessWithData(c, nil)
-}
-
-// @Tags Database Mysql
-// @Summary Update mysql conf by upload file
-// @Description 上传替换 mysql 配置文件
-// @Accept json
-// @Param request body dto.MysqlConfUpdateByFile true "request"
-// @Success 200
-// @Security ApiKeyAuth
-// @Router /databases/conffile/update [post]
-// @x-panel-log {"bodyKeys":[],"paramKeys":[],"BeforeFunctions":[],"formatZH":"更新 mysql 数据库配置信息","formatEN":"update the mysql database configuration information"}
-func (b *BaseApi) UpdateMysqlConfByFile(c *gin.Context) {
-	var req dto.MysqlConfUpdateByFile
-	if err := helper.CheckBindAndValidate(&req, c); err != nil {
-		return
-	}
-
-	if err := mysqlService.UpdateConfByFile(req); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
-		return
-	}
-
 	helper.SuccessWithData(c, nil)
 }
 
@@ -274,51 +282,6 @@ func (b *BaseApi) DeleteMysql(c *gin.Context) {
 }
 
 // @Tags Database Mysql
-// @Summary Load mysql base info
-// @Description 获取 mysql 基础信息
-// @Accept json
-// @Param request body dto.OperationWithNameAndType true "request"
-// @Success 200 {object} dto.DBBaseInfo
-// @Security ApiKeyAuth
-// @Router /databases/baseinfo [post]
-func (b *BaseApi) LoadBaseinfo(c *gin.Context) {
-	var req dto.OperationWithNameAndType
-	if err := helper.CheckBindAndValidate(&req, c); err != nil {
-		return
-	}
-
-	data, err := mysqlService.LoadBaseInfo(req)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
-		return
-	}
-
-	helper.SuccessWithData(c, data)
-}
-
-// @Tags Database
-// @Summary Load Database file
-// @Description 获取数据库文件
-// @Accept json
-// @Param request body dto.OperationWithNameAndType true "request"
-// @Success 200
-// @Security ApiKeyAuth
-// @Router /databases/load/file [post]
-func (b *BaseApi) LoadDatabaseFile(c *gin.Context) {
-	var req dto.OperationWithNameAndType
-	if err := helper.CheckBindAndValidate(&req, c); err != nil {
-		return
-	}
-
-	content, err := mysqlService.LoadDatabaseFile(req)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)
-		return
-	}
-	helper.SuccessWithData(c, content)
-}
-
-// @Tags Database Mysql
 // @Summary Load mysql remote access
 // @Description 获取 mysql 远程访问权限
 // @Accept json
@@ -331,7 +294,6 @@ func (b *BaseApi) LoadRemoteAccess(c *gin.Context) {
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {
 		return
 	}
-
 	isRemote, err := mysqlService.LoadRemoteAccess(req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeErrInternalServer, constant.ErrTypeInternalServer, err)

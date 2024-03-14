@@ -166,6 +166,14 @@ export function computeSizeFromMB(size: number): string {
     return (size / Math.pow(num, 3)).toFixed(2) + ' TB';
 }
 
+export function computeSizeFromKB(size: number): string {
+    const num = 1024.0;
+    if (size < num) return size + ' KB';
+    if (size < Math.pow(num, 2)) return (size / num).toFixed(2) + ' MB';
+    if (size < Math.pow(num, 3)) return (size / Math.pow(num, 2)).toFixed(2) + ' GB';
+    return (size / Math.pow(num, 3)).toFixed(2) + ' TB';
+}
+
 export function computeSizeFromKBs(size: number): string {
     const num = 1024.0;
     if (size < num) return size + ' KB/s';
@@ -193,9 +201,9 @@ let icons = new Map([
     ['.pdf', 'p-file-pdf'],
 ]);
 
-export function getIcon(extention: string): string {
-    if (icons.get(extention) != undefined) {
-        const icon = icons.get(extention);
+export function getIcon(extension: string): string {
+    if (icons.get(extension) != undefined) {
+        const icon = icons.get(extension);
         return String(icon);
     } else {
         return 'p-file-normal';
@@ -370,6 +378,19 @@ export function transTimeUnit(val: string): any {
     return val + i18n.global.t('commons.units.second');
 }
 
+export function splitHttp(url: string) {
+    if (url.indexOf('https://') != -1) {
+        return { proto: 'https', url: url.replaceAll('https://', '') };
+    }
+    if (url.indexOf('http://') != -1) {
+        return { proto: 'http', url: url.replaceAll('http://', '') };
+    }
+    return { proto: '', url: url };
+}
+export function spliceHttp(proto: string, url: string) {
+    return proto + '://' + url.replaceAll('https://', '').replaceAll('http://', '');
+}
+
 export function getAge(d1: string): string {
     const dateBegin = new Date(d1);
     const dateEnd = new Date();
@@ -414,7 +435,8 @@ export function toLowerCase(str: string) {
 
 export function downloadFile(filePath: string) {
     let url = `${import.meta.env.VITE_API_URL as string}/files/download?`;
-    window.open(url + 'path=' + filePath, '_blank');
+    let path = encodeURIComponent(filePath);
+    window.open(url + 'path=' + path, '_blank');
 }
 
 export function downloadWithContent(content: string, fileName: string) {
@@ -426,7 +448,6 @@ export function downloadWithContent(content: string, fileName: string) {
     const event = new MouseEvent('click');
     a.dispatchEvent(event);
 }
-
 export function getDateStr() {
     let now: Date = new Date();
 

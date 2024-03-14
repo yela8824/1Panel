@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { ResultData } from '@/api/interface';
 import { ResultEnum } from '@/enums/http-enum';
 import { checkStatus } from './helper/check-status';
@@ -27,12 +27,12 @@ class RequestHttp {
                     ...config.headers,
                 };
                 if (config.url === '/auth/login' || config.url === '/auth/mfalogin') {
-                    let entrace = Base64.encode(globalStore.entrance);
-                    config.headers.EntranceCode = entrace;
+                    let entrance = Base64.encode(globalStore.entrance);
+                    config.headers.EntranceCode = entrance;
                 }
                 return {
                     ...config,
-                };
+                } as InternalAxiosRequestConfig<any>;
             },
             (error: AxiosError) => {
                 return Promise.reject(error);

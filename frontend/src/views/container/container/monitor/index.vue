@@ -12,7 +12,6 @@
         <el-form label-position="top" @submit.prevent>
             <el-form-item :label="$t('container.refreshTime')">
                 <el-select v-model="timeInterval" @change="changeTimer">
-                    <el-option label="1s" :value="1" />
                     <el-option label="3s" :value="3" />
                     <el-option label="5s" :value="5" />
                     <el-option label="10s" :value="10" />
@@ -216,7 +215,7 @@ const loadData = async () => {
                 data: netRxDatas.value,
             },
         ],
-        formatStr: 'KB/s',
+        formatStr: 'KB',
     };
 };
 const handleClose = async () => {

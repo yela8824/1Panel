@@ -6,15 +6,13 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/global"
 )
 
-func loadParamFromVars(key string, isString bool, vars map[string]interface{}) string {
+func loadParamFromVars(key string, vars map[string]interface{}) string {
 	if _, ok := vars[key]; !ok {
-		if key != "bucket" {
+		if key != "bucket" && key != "port" {
 			global.LOG.Errorf("load param %s from vars failed, err: not exist!", key)
 		}
 		return ""
 	}
-	if isString {
-		return vars[key].(string)
-	}
-	return fmt.Sprintf("%v", vars[key].(float64))
+
+	return fmt.Sprintf("%v", vars[key])
 }

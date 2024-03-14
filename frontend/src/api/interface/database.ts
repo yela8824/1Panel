@@ -33,7 +33,7 @@ export namespace Database {
         mysqlKey: string;
         containerName: string;
     }
-    export interface MysqlConfUpdateByFile {
+    export interface DBConfUpdate {
         type: string;
         database: string;
         file: string;
@@ -48,6 +48,15 @@ export namespace Database {
         permission: string;
         description: string;
     }
+
+    export interface BindUser {
+        database: string;
+        db: string;
+        username: string;
+        password: string;
+        permission: string;
+    }
+
     export interface MysqlLoadDB {
         from: string;
         type: string;
@@ -58,6 +67,7 @@ export namespace Database {
         type: string;
         database: string;
     }
+
     export interface MysqlDBDelete {
         id: number;
         type: string;
@@ -131,12 +141,73 @@ export namespace Database {
         File: string;
         Position: number;
     }
-    export interface MysqlOption {
-        id: number;
+    export interface PgLoadDB {
         from: string;
         type: string;
         database: string;
+    }
+    export interface PgBind {
         name: string;
+        database: string;
+        username: string;
+        password: string;
+        superUser: boolean;
+    }
+    export interface PgChangePrivileges {
+        name: string;
+        database: string;
+        username: string;
+        superUser: boolean;
+    }
+    export interface PostgresqlDBDelete {
+        id: number;
+        type: string;
+        database: string;
+        forceDelete: boolean;
+        deleteBackup: boolean;
+    }
+    export interface PostgresqlDBDeleteCheck {
+        id: number;
+        type: string;
+        database: string;
+    }
+    export interface PostgresqlDBInfo {
+        id: number;
+        createdAt: Date;
+        name: string;
+        postgresqlName: string;
+        from: string;
+        format: string;
+        username: string;
+        password: string;
+        description: string;
+    }
+    export interface PostgresqlConfUpdateByFile {
+        type: string;
+        database: string;
+        file: string;
+    }
+    export interface PostgresqlDBCreate {
+        name: string;
+        from: string;
+        database: string;
+        format: string;
+        username: string;
+        password: string;
+        superUser: boolean;
+        description: string;
+    }
+    export interface PostgresqlDBInfo {
+        id: number;
+        createdAt: Date;
+        name: string;
+        mysqlName: string;
+        from: string;
+        format: string;
+        username: string;
+        password: string;
+        superUser: boolean;
+        description: string;
     }
     export interface ChangeInfo {
         id: number;
@@ -238,6 +309,12 @@ export namespace Database {
         database: string;
         version: string;
         address: string;
+    }
+    export interface DbItem {
+        id: number;
+        from: string;
+        database: string;
+        name: string;
     }
     export interface DatabaseCreate {
         name: string;

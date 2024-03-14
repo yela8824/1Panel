@@ -38,18 +38,6 @@ func WithData() DumpOption {
 	}
 }
 
-func WithTables(tables ...string) DumpOption {
-	return func(option *dumpOption) {
-		option.tables = tables
-	}
-}
-
-func WithAllTable() DumpOption {
-	return func(option *dumpOption) {
-		option.isAllTable = true
-	}
-}
-
 func WithWriter(writer io.Writer) DumpOption {
 	return func(option *dumpOption) {
 		option.writer = writer
@@ -152,7 +140,7 @@ func Dump(dns string, opts ...DumpOption) error {
 			var columns []string
 			columns, err = lineRows.Columns()
 			if err != nil {
-				global.LOG.Errorf("get columes falied, err: %v", err)
+				global.LOG.Errorf("get columes failed, err: %v", err)
 				return err
 			}
 			columnTypes, err := lineRows.ColumnTypes()

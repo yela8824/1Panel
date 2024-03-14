@@ -2,6 +2,14 @@ package service
 
 import (
 	"fmt"
+	"math"
+	"os"
+	"path"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/1Panel-dev/1Panel/backend/app/dto"
 	"github.com/1Panel-dev/1Panel/backend/app/dto/request"
 	"github.com/1Panel-dev/1Panel/backend/app/dto/response"
@@ -9,12 +17,6 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/utils/files"
 	"github.com/shirou/gopsutil/v3/disk"
-	"os"
-	"path"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type RecycleBinService struct {
@@ -193,6 +195,10 @@ func getRecycleBinDTOFromName(filename string) (*response.RecycleBinDTO, error) 
 	if err != nil {
 		return nil, err
 	}
+	if size < math.MinInt || size > math.MaxInt {
+		return nil, fmt.Errorf("size out of int range")
+	}
+
 	deleteTime, err := strconv.ParseInt(matches[3], 10, 64)
 	if err != nil {
 		return nil, err

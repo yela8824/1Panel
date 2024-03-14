@@ -1,7 +1,7 @@
 <template>
     <div v-loading="loading">
         <div v-show="isOnDetail">
-            <ComposeDetial @back="backList" ref="composeDetailRef" />
+            <ComposeDetail @back="backList" ref="composeDetailRef" />
         </div>
         <el-card v-if="dockerStatus != 'Running'" class="mask-prompt">
             <span>{{ $t('container.serviceUnavailable') }}</span>
@@ -12,8 +12,8 @@
         <LayoutContent v-if="!isOnDetail" :title="$t('container.compose')" :class="{ mask: dockerStatus != 'Running' }">
             <template #prompt>
                 <el-alert type="info" :closable="false">
-                    <template #default>
-                        <span>
+                    <template #title>
+                        <span class="flx-align-center">
                             <span>{{ $t('container.composeHelper', [baseDir]) }}</span>
                             <el-button type="primary" link @click="toFolder">
                                 <el-icon>
@@ -33,17 +33,7 @@
                     </el-col>
                     <el-col :span="8">
                         <TableSetting @search="search()" />
-                        <div class="search-button">
-                            <el-input
-                                clearable
-                                v-model="searchName"
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
+                        <TableSearch @search="search()" v-model:searchName="searchName" />
                     </el-col>
                 </el-row>
             </template>
@@ -91,13 +81,11 @@
 </template>
 
 <script lang="ts" setup>
-import Tooltip from '@/components/tooltip/index.vue';
-import TableSetting from '@/components/table-setting/index.vue';
 import { reactive, onMounted, ref } from 'vue';
 import EditDialog from '@/views/container/compose/edit/index.vue';
 import CreateDialog from '@/views/container/compose/create/index.vue';
 import DeleteDialog from '@/views/container/compose/delete/index.vue';
-import ComposeDetial from '@/views/container/compose/detail/index.vue';
+import ComposeDetail from '@/views/container/compose/detail/index.vue';
 import { loadContainerLog, loadDockerStatus, searchCompose } from '@/api/modules/container';
 import i18n from '@/lang';
 import { Container } from '@/api/interface/container';

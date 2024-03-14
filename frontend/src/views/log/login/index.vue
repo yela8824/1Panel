@@ -15,19 +15,9 @@
                         </el-button>
                     </el-col>
                     <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
-                        <div class="flx-align-center">
-                            <div class="search-button">
-                                <el-input
-                                    v-model="searchIP"
-                                    clearable
-                                    @clear="search()"
-                                    suffix-icon="Search"
-                                    @keyup.enter="search()"
-                                    @change="search()"
-                                    :placeholder="$t('commons.button.search') + ' ip'"
-                                ></el-input>
-                            </div>
+                        <div class="flex justify-end">
                             <TableSetting @search="search()" />
+                            <TableSearch @search="search()" v-model:searchName="searchIP" />
                         </div>
                     </el-col>
                 </el-row>
@@ -35,14 +25,14 @@
 
             <template #search>
                 <div class="flx-align-center">
-                    <el-select v-model="searchStatus" @change="search()" clearable>
+                    <el-select v-model="searchStatus" @change="search()" clearable class="p-w-200">
                         <template #prefix>{{ $t('commons.table.status') }}</template>
                         <el-option :label="$t('commons.table.all')" value=""></el-option>
                         <el-option :label="$t('commons.status.success')" value="Success"></el-option>
                         <el-option :label="$t('commons.status.failed')" value="Failed"></el-option>
                     </el-select>
 
-                    <el-button type="primary" plain @click="onClean()" style="margin-left: 10px">
+                    <el-button type="primary" plain @click="onClean()" class="ml-2.5">
                         {{ $t('logs.deleteLogs') }}
                     </el-button>
                 </div>
@@ -78,7 +68,6 @@
 </template>
 
 <script setup lang="ts">
-import TableSetting from '@/components/table-setting/index.vue';
 import ConfirmDialog from '@/components/confirm-dialog/index.vue';
 import { dateFormat } from '@/utils/util';
 import { cleanLogs, getLoginLogs } from '@/api/modules/log';

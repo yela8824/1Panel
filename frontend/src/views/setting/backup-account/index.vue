@@ -2,21 +2,23 @@
     <div>
         <LayoutContent :title="$t('commons.button.backup')">
             <template #main>
-                <el-form label-position="left" label-width="130px" :v-key="reflash">
+                <el-form label-width="130px" :v-key="refresh">
                     <el-row :gutter="20">
                         <el-col :span="24">
-                            <div>
-                                <svg-icon class="card-logo" iconName="p-file-folder"></svg-icon>
-                                <span class="card-title">&nbsp;{{ $t('setting.LOCAL') }}</span>
+                            <div class="flx-justify-between">
+                                <span class="flx-align-center">
+                                    <svg-icon class="card-logo" iconName="p-file-folder"></svg-icon>
+                                    <span class="card-title">&nbsp;{{ $t('setting.LOCAL') }}</span>
+                                </span>
                                 <div style="float: right">
-                                    <el-button round @click="onOpenDialog('edit', 'local', localData)">
+                                    <el-button round @click="onOpenDialog('edit', 'LOCAL', localData)">
                                         {{ $t('commons.button.edit') }}
                                     </el-button>
                                 </div>
                             </div>
                             <el-divider class="divider" />
                             <div style="margin-left: 20px">
-                                <el-form-item :label="$t('setting.currentPath')">
+                                <el-form-item :label="$t('setting.backupDir')">
                                     {{ localData.varsJson['dir'] }}
                                 </el-form-item>
                                 <el-form-item :label="$t('commons.table.createdAt')">
@@ -32,17 +34,19 @@
                 </div>
 
                 <el-alert type="info" :closable="false" class="common-div">
-                    <template #default>
-                        <div style="margin-bottom: 3px"><span v-html="$t('setting.backupAlert')"></span></div>
+                    <template #title>
+                        <span v-html="$t('setting.backupAlert')"></span>
                     </template>
                 </el-alert>
 
                 <el-row :gutter="20" class="common-div">
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-aws"></svg-icon>
-                            <span class="card-title">&nbsp;{{ $t('setting.S3') }}</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-aws"></svg-icon>
+                                <span class="card-title">&nbsp;{{ $t('setting.S3') }}</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     :disabled="s3Data.id === 0"
@@ -54,8 +58,8 @@
                                     {{ $t('commons.button.delete') }}
                                 </el-button>
                             </div>
-                            <el-divider class="divider" />
                         </div>
+                        <el-divider class="divider" />
                         <div v-if="s3Data.id !== 0" style="margin-left: 20px">
                             <el-form-item label="Region">
                                 {{ s3Data.varsJson['region'] }}
@@ -95,10 +99,12 @@
                         </el-alert>
                     </el-col>
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-oss"></svg-icon>
-                            <span class="card-title">&nbsp;{{ $t('setting.OSS') }}</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-oss"></svg-icon>
+                                <span class="card-title">&nbsp;{{ $t('setting.OSS') }}</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     :disabled="ossData.id === 0"
@@ -151,10 +157,12 @@
                 </el-row>
                 <el-row :gutter="20" class="common-div">
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-tengxunyun1"></svg-icon>
-                            <span class="card-title">&nbsp;{{ $t('setting.COS') }}</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-tengxunyun1"></svg-icon>
+                                <span class="card-title">&nbsp;{{ $t('setting.COS') }}</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     :disabled="cosData.id === 0"
@@ -166,8 +174,8 @@
                                     {{ $t('commons.button.delete') }}
                                 </el-button>
                             </div>
-                            <el-divider class="divider" />
                         </div>
+                        <el-divider class="divider" />
                         <div v-if="cosData.id !== 0" style="margin-left: 20px">
                             <el-form-item label="Region">
                                 {{ cosData.varsJson['region'] }}
@@ -204,15 +212,17 @@
                         </el-alert>
                     </el-col>
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-onedrive"></svg-icon>
-                            <span class="card-title">&nbsp;{{ $t('setting.OneDrive') }}</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-onedrive"></svg-icon>
+                                <span class="card-title">&nbsp;{{ $t('setting.OneDrive') }}</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     plain
                                     :disabled="oneDriveData.id === 0"
-                                    @click="onOpenDialog('edit', 'SFTP', oneDriveData)"
+                                    @click="onOpenDialog('edit', 'OneDrive', oneDriveData)"
                                 >
                                     {{ $t('commons.button.edit') }}
                                 </el-button>
@@ -226,6 +236,26 @@
                             <el-form-item :label="$t('setting.backupDir')">
                                 <span v-if="oneDriveData.backupPath">{{ oneDriveData.backupPath }}</span>
                                 <span v-else>{{ $t('setting.unSetting') }}</span>
+                            </el-form-item>
+                            <el-form-item :label="$t('setting.refreshTime')">
+                                <span>{{ oneDriveData.varsJson['refresh_time'] }}</span>
+                                <el-button @click="refreshToken" link type="primary" class="ml-2">
+                                    {{ $t('commons.button.refresh') }}
+                                </el-button>
+                            </el-form-item>
+                            <el-form-item :label="$t('setting.refreshStatus')">
+                                <el-tag v-if="oneDriveData.varsJson['refresh_status'] === 'Success'" type="success">
+                                    {{ $t('commons.status.success') }}
+                                </el-tag>
+                                <el-tooltip
+                                    v-if="oneDriveData.varsJson['refresh_status'] === 'Failed'"
+                                    :content="oneDriveData.varsJson['refresh_msg']"
+                                    placement="top"
+                                >
+                                    <el-tag type="danger">
+                                        {{ $t('commons.status.failed') }}
+                                    </el-tag>
+                                </el-tooltip>
                             </el-form-item>
                             <el-form-item :label="$t('commons.table.createdAt')">
                                 {{ dateFormat(0, 0, oneDriveData.createdAt) }}
@@ -246,10 +276,12 @@
                 </el-row>
                 <el-row :gutter="20" style="margin-top: 20px">
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-qiniuyun"></svg-icon>
-                            <span class="card-title">&nbsp;{{ $t('setting.KODO') }}</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-qiniuyun"></svg-icon>
+                                <span class="card-title">&nbsp;{{ $t('setting.KODO') }}</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     :disabled="kodoData.id === 0"
@@ -286,10 +318,12 @@
                         </el-alert>
                     </el-col>
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-minio"></svg-icon>
-                            <span class="card-title">&nbsp;MINIO</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-minio"></svg-icon>
+                                <span class="card-title">&nbsp;MINIO</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     :disabled="minioData.id === 0"
@@ -327,10 +361,12 @@
                 </el-row>
                 <el-row :gutter="20" style="margin-top: 20px">
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-SFTP"></svg-icon>
-                            <span class="card-title">&nbsp;SFTP</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-SFTP"></svg-icon>
+                                <span class="card-title">&nbsp;SFTP</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     plain
@@ -352,7 +388,7 @@
                             <el-form-item :label="$t('commons.table.port')">
                                 {{ sftpData.varsJson['port'] }}
                             </el-form-item>
-                            <el-form-item :label="$t('setting.path')">
+                            <el-form-item :label="$t('setting.backupDir')">
                                 {{ sftpData.bucket }}
                             </el-form-item>
                             <el-form-item :label="$t('commons.table.createdAt')">
@@ -366,10 +402,12 @@
                         </el-alert>
                     </el-col>
                     <el-col :xs="24" :sm="12" :md="12" :lg="12" :xl="12">
-                        <div>
-                            <svg-icon class="card-logo" iconName="p-webdav"></svg-icon>
-                            <span class="card-title">&nbsp;WebDAV</span>
-                            <div style="float: right">
+                        <div class="flx-justify-between">
+                            <span class="flx-align-center">
+                                <svg-icon class="card-logo" iconName="p-webdav"></svg-icon>
+                                <span class="card-title">&nbsp;WebDAV</span>
+                            </span>
+                            <div>
                                 <el-button
                                     round
                                     plain
@@ -388,10 +426,7 @@
                             <el-form-item :label="$t('setting.address')">
                                 {{ webDAVData.varsJson['address'] }}
                             </el-form-item>
-                            <el-form-item :label="$t('commons.table.port')">
-                                {{ webDAVData.varsJson['port'] }}
-                            </el-form-item>
-                            <el-form-item :label="$t('setting.path')">
+                            <el-form-item :label="$t('setting.backupDir')">
                                 {{ webDAVData.bucket }}
                             </el-form-item>
                             <el-form-item :label="$t('commons.table.createdAt')">
@@ -414,23 +449,50 @@
             </template>
         </LayoutContent>
 
+        <localDialog ref="localRef" @search="search" />
+        <s3Dialog ref="s3Ref" @search="search" />
+        <ossDialog ref="ossRef" @search="search" />
+        <cosDialog ref="cosRef" @search="search" />
+        <oneDriveDialog ref="oneDriveRef" @search="search" />
+        <kodoDialog ref="kodoRef" @search="search" />
+        <minioDialog ref="minioRef" @search="search" />
+        <sftpDialog ref="sftpRef" @search="search" />
+        <webDavDialog ref="webDavRef" @search="search" />
         <OpDialog ref="opRef" @search="search" />
-        <DialogOperate ref="dialogRef" @search="search" />
     </div>
 </template>
 <script setup lang="ts">
 import { dateFormat } from '@/utils/util';
 import { onMounted, ref } from 'vue';
-import OpDialog from '@/components/del-dialog/index.vue';
-import { getBackupList, deleteBackup } from '@/api/modules/setting';
-import DialogOperate from '@/views/setting/backup-account/operate/index.vue';
+import { getBackupList, deleteBackup, refreshOneDrive } from '@/api/modules/setting';
+import localDialog from '@/views/setting/backup-account/local/index.vue';
+import s3Dialog from '@/views/setting/backup-account/s3/index.vue';
+import ossDialog from '@/views/setting/backup-account/oss/index.vue';
+import cosDialog from '@/views/setting/backup-account/cos/index.vue';
+import oneDriveDialog from '@/views/setting/backup-account/onedrive/index.vue';
+import kodoDialog from '@/views/setting/backup-account/kodo/index.vue';
+import minioDialog from '@/views/setting/backup-account/minio/index.vue';
+import sftpDialog from '@/views/setting/backup-account/sftp/index.vue';
+import webDavDialog from '@/views/setting/backup-account/webdav/index.vue';
 import { Backup } from '@/api/interface/backup';
 import { ElForm } from 'element-plus';
 import i18n from '@/lang';
+import { MsgSuccess } from '@/utils/message';
 
 const data = ref();
 const opRef = ref();
-const reflash = ref(false);
+const refresh = ref(false);
+
+const localRef = ref();
+const s3Ref = ref();
+const ossRef = ref();
+const cosRef = ref();
+const oneDriveRef = ref();
+const kodoRef = ref();
+const minioRef = ref();
+const sftpRef = ref();
+const webDavRef = ref();
+
 const localData = ref<Backup.BackupInfo>({
     id: 0,
     type: 'LOCAL',
@@ -453,7 +515,6 @@ const ossData = ref<Backup.BackupInfo>({
     backupPath: '',
     vars: '',
     varsJson: {
-        region: '',
         endpoint: '',
         scType: 'Standard',
     },
@@ -510,7 +571,9 @@ const oneDriveData = ref<Backup.BackupInfo>({
     backupPath: '',
     vars: '',
     varsJson: {
-        redirectURI: '',
+        refresh_msg: '',
+        refresh_time: '',
+        refresh_status: '',
     },
     createdAt: new Date(),
 });
@@ -540,6 +603,7 @@ const cosData = ref<Backup.BackupInfo>({
     varsJson: {
         region: '',
         scType: 'Standard',
+        endpoint: '',
     },
     createdAt: new Date(),
 });
@@ -609,7 +673,6 @@ const onDelete = async (row: Backup.BackupInfo) => {
     });
 };
 
-const dialogRef = ref();
 const onOpenDialog = async (
     title: string,
     accountType: string,
@@ -623,7 +686,41 @@ const onOpenDialog = async (
         title,
         rowData: { ...rowData },
     };
-    dialogRef.value!.acceptParams(params);
+    switch (accountType) {
+        case 'LOCAL':
+            localRef.value.acceptParams(params);
+            return;
+        case 'S3':
+            s3Ref.value.acceptParams(params);
+            return;
+        case 'OSS':
+            ossRef.value.acceptParams(params);
+            return;
+        case 'COS':
+            cosRef.value.acceptParams(params);
+            return;
+        case 'OneDrive':
+            oneDriveRef.value.acceptParams(params);
+            return;
+        case 'KODO':
+            kodoRef.value.acceptParams(params);
+            return;
+        case 'MINIO':
+            minioRef.value.acceptParams(params);
+            return;
+        case 'SFTP':
+            sftpRef.value.acceptParams(params);
+            return;
+        case 'WebDAV':
+            webDavRef.value.acceptParams(params);
+            return;
+    }
+};
+
+const refreshToken = async () => {
+    await refreshOneDrive();
+    MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
+    search();
 };
 
 onMounted(() => {

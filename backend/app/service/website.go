@@ -18,6 +18,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/1Panel-dev/1Panel/backend/utils/common"
+	"github.com/jinzhu/copier"
+
 	"github.com/1Panel-dev/1Panel/backend/i18n"
 	"github.com/spf13/afero"
 
@@ -54,7 +57,7 @@ type IWebsiteService interface {
 	GetWebsites() ([]response.WebsiteDTO, error)
 	CreateWebsite(create request.WebsiteCreate) error
 	OpWebsite(req request.WebsiteOp) error
-	GetWebsiteOptions() ([]string, error)
+	GetWebsiteOptions() ([]response.WebsiteOption, error)
 	UpdateWebsite(req request.WebsiteUpdate) error
 	DeleteWebsite(req request.WebsiteDelete) error
 	GetWebsite(id uint) (response.WebsiteDTO, error)
@@ -172,8 +175,14 @@ func (w WebsiteService) GetWebsites() ([]response.WebsiteDTO, error) {
 func (w WebsiteService) CreateWebsite(create request.WebsiteCreate) (err error) {
 	primaryDomainArray := strings.Split(create.PrimaryDomain, ":")
 	primaryDomain := primaryDomainArray[0]
-
-	if exist, _ := websiteRepo.GetBy(websiteRepo.WithAlias(create.Alias)); len(exist) > 0 {
+	alias := create.Alias
+	if common.ContainsChinese(alias) {
+		alias, err = common.PunycodeEncode(alias)
+		if err != nil {
+			return
+		}
+	}
+	if exist, _ := websiteRepo.GetBy(websiteRepo.WithAlias(alias)); len(exist) > 0 {
 		return buserr.New(constant.ErrAliasIsExist)
 	}
 
@@ -201,7 +210,7 @@ func (w WebsiteService) CreateWebsite(create request.WebsiteCreate) (err error) 
 	website := &model.Website{
 		PrimaryDomain:  primaryDomain,
 		Type:           create.Type,
-		Alias:          create.Alias,
+		Alias:          alias,
 		Remark:         create.Remark,
 		Status:         constant.WebRunning,
 		ExpireDate:     defaultDate,
@@ -341,14 +350,18 @@ func (w WebsiteService) OpWebsite(req request.WebsiteOp) error {
 	return websiteRepo.Save(context.Background(), &website)
 }
 
-func (w WebsiteService) GetWebsiteOptions() ([]string, error) {
-	webs, err := websiteRepo.GetBy()
+func (w WebsiteService) GetWebsiteOptions() ([]response.WebsiteOption, error) {
+	webs, err := websiteRepo.List()
 	if err != nil {
 		return nil, err
 	}
-	var datas []string
+	var datas []response.WebsiteOption
 	for _, web := range webs {
-		datas = append(datas, web.PrimaryDomain)
+		var item response.WebsiteOption
+		if err := copier.Copy(&item, &web); err != nil {
+			return nil, err
+		}
+		datas = append(datas, item)
 	}
 	return datas, nil
 }
@@ -647,6 +660,13 @@ func (w WebsiteService) OpWebsiteHTTPS(ctx context.Context, req request.WebsiteH
 		res        response.WebsiteHTTPS
 		websiteSSL model.WebsiteSSL
 	)
+	nginxInstall, err := getAppInstallByKey(constant.AppOpenresty)
+	if err != nil {
+		return nil, err
+	}
+	if err = ChangeHSTSConfig(req.Enable, nginxInstall, website); err != nil {
+		return nil, err
+	}
 	res.Enable = req.Enable
 	res.SSLProtocol = req.SSLProtocol
 	res.Algorithm = req.Algorithm
@@ -758,6 +778,7 @@ func (w WebsiteService) OpWebsiteHTTPS(ctx context.Context, req request.WebsiteH
 
 		res.SSL = websiteSSL
 	}
+
 	website.Protocol = constant.ProtocolHTTPS
 	if err := applySSL(website, websiteSSL, req); err != nil {
 		return nil, err
@@ -799,30 +820,27 @@ func (w WebsiteService) PreInstallCheck(req request.WebsiteInstallCheckReq) ([]r
 	} else {
 		checkIds = append(req.InstallIds, appInstall.ID)
 	}
-	for _, id := range checkIds {
-		if err := syncByID(id); err != nil {
-			return nil, err
-		}
-	}
 	if len(checkIds) > 0 {
 		installList, _ := appInstallRepo.ListBy(commonRepo.WithIdsIn(checkIds))
 		for _, install := range installList {
+			if err = syncAppInstallStatus(&install); err != nil {
+				return nil, err
+			}
 			res = append(res, response.WebsitePreInstallCheck{
 				Name:    install.Name,
 				Status:  install.Status,
 				Version: install.Version,
 				AppName: install.App.Name,
 			})
-			if install.Status != constant.StatusRunning {
+			if install.Status != constant.Running {
 				showErr = true
 			}
 		}
 	}
 	if showErr {
 		return res, nil
-	} else {
-		return nil, nil
 	}
+	return nil, nil
 }
 
 func (w WebsiteService) GetWafConfig(req request.WebsiteWafReq) (response.WebsiteWafConfig, error) {
@@ -1413,7 +1431,7 @@ func (w WebsiteService) UpdateSitePermission(req request.WebsiteUpdateDirPermiss
 	if cmd.HasNoPasswordSudo() {
 		chownCmd = fmt.Sprintf("sudo %s", chownCmd)
 	}
-	if out, err := cmd.ExecWithTimeOut(chownCmd, 1*time.Second); err != nil {
+	if out, err := cmd.ExecWithTimeOut(chownCmd, 10*time.Second); err != nil {
 		if out != "" {
 			return errors.New(out)
 		}
@@ -1490,13 +1508,19 @@ func (w WebsiteService) OperateProxy(req request.WebsiteProxyConfig) (err error)
 
 	switch req.Operate {
 	case "create":
-		config = parser.NewStringParser(string(nginx_conf.Proxy)).Parse()
+		config, err = parser.NewStringParser(string(nginx_conf.Proxy)).Parse()
+		if err != nil {
+			return
+		}
 	case "edit":
 		par, err = parser.NewParser(includePath)
 		if err != nil {
 			return
 		}
-		config = par.Parse()
+		config, err = par.Parse()
+		if err != nil {
+			return
+		}
 		oldContent, err = fileOp.GetContent(includePath)
 		if err != nil {
 			return
@@ -1512,6 +1536,7 @@ func (w WebsiteService) OperateProxy(req request.WebsiteProxyConfig) (err error)
 		_ = fileOp.Rename(backPath, includePath)
 		return updateNginxConfig(constant.NginxScopeServer, nil, &website)
 	}
+
 	config.FilePath = includePath
 	directives := config.Directives
 	location, ok := directives[0].(*components.Location)
@@ -1521,6 +1546,9 @@ func (w WebsiteService) OperateProxy(req request.WebsiteProxyConfig) (err error)
 	}
 	location.UpdateDirective("proxy_pass", []string{req.ProxyPass})
 	location.UpdateDirective("proxy_set_header", []string{"Host", req.ProxyHost})
+	if website.Protocol == constant.ProtocolHTTPS {
+		location.UpdateDirective("add_header", []string{"Strict-Transport-Security", "\"max-age=31536000\""})
+	}
 	location.ChangePath(req.Modifier, req.Match)
 	if req.Cache {
 		location.AddCache(req.CacheTime, req.CacheUnit)
@@ -1586,7 +1614,10 @@ func (w WebsiteService) GetProxies(id uint) (res []request.WebsiteProxyConfig, e
 			return
 		}
 		proxyConfig.Content = string(content)
-		config = parser.NewStringParser(string(content)).Parse()
+		config, err = parser.NewStringParser(string(content)).Parse()
+		if err != nil {
+			return nil, err
+		}
 		directives := config.GetDirectives()
 
 		location, ok := directives[0].(*components.Location)
@@ -2033,7 +2064,10 @@ func (w WebsiteService) OperateRedirect(req request.NginxRedirectReq) (err error
 		if err != nil {
 			return
 		}
-		config = oldPar.Parse()
+		config, err = oldPar.Parse()
+		if err != nil {
+			return
+		}
 		oldContent, err = fileOp.GetContent(includePath)
 		if err != nil {
 			return
@@ -2174,7 +2208,10 @@ func (w WebsiteService) GetRedirect(id uint) (res []response.NginxRedirectConfig
 			return
 		}
 		redirectConfig.Content = string(content)
-		config = parser.NewStringParser(string(content)).Parse()
+		config, err = parser.NewStringParser(string(content)).Parse()
+		if err != nil {
+			return
+		}
 
 		dirs := config.GetDirectives()
 		if len(dirs) > 0 {

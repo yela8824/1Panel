@@ -10,7 +10,7 @@
                         <el-form-item :label="$t('firewall.address')" prop="address">
                             <el-input
                                 :disabled="dialogData.title === 'edit'"
-                                :autosize="{ minRows: 3, maxRows: 6 }"
+                                :rows="3"
                                 type="textarea"
                                 clearable
                                 v-model.trim="dialogData.rowData!.address"
@@ -20,8 +20,8 @@
                         </el-form-item>
                         <el-form-item :label="$t('firewall.strategy')" prop="strategy">
                             <el-radio-group v-model="dialogData.rowData!.strategy">
-                                <el-radio label="accept">{{ $t('firewall.allow') }}</el-radio>
-                                <el-radio label="drop">{{ $t('firewall.deny') }}</el-radio>
+                                <el-radio value="accept">{{ $t('firewall.allow') }}</el-radio>
+                                <el-radio value="drop">{{ $t('firewall.deny') }}</el-radio>
                             </el-radio-group>
                         </el-form-item>
                         <el-form-item :label="$t('commons.table.description')" prop="description">

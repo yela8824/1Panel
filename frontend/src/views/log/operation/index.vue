@@ -16,22 +16,12 @@
                     </el-col>
                     <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
                         <TableSetting @search="search()" />
-                        <div class="search-button">
-                            <el-input
-                                clearable
-                                v-model="searchName"
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
+                        <TableSearch @search="search()" v-model:searchName="searchName" />
                     </el-col>
                 </el-row>
             </template>
             <template #search>
-                <el-select v-model="searchGroup" @change="search()" clearable>
+                <el-select v-model="searchGroup" @change="search()" clearable class="p-w-200">
                     <template #prefix>{{ $t('logs.resource') }}</template>
                     <el-option :label="$t('commons.table.all')" value=""></el-option>
                     <el-option :label="$t('logs.detail.apps')" value="apps"></el-option>
@@ -46,7 +36,13 @@
                     <el-option :label="$t('logs.detail.logs')" value="logs"></el-option>
                     <el-option :label="$t('logs.detail.settings')" value="settings"></el-option>
                 </el-select>
-                <el-select v-model="searchStatus" @change="search()" clearable style="margin-left: 10px">
+                <el-select
+                    v-model="searchStatus"
+                    @change="search()"
+                    clearable
+                    style="margin-left: 10px"
+                    class="p-w-200"
+                >
                     <template #prefix>{{ $t('commons.table.status') }}</template>
                     <el-option :label="$t('commons.table.all')" value=""></el-option>
                     <el-option :label="$t('commons.status.success')" value="Success"></el-option>
@@ -109,7 +105,6 @@
 </template>
 
 <script setup lang="ts">
-import TableSetting from '@/components/table-setting/index.vue';
 import ConfirmDialog from '@/components/confirm-dialog/index.vue';
 import { dateFormat } from '@/utils/util';
 import { cleanLogs, getOperationLogs } from '@/api/modules/log';

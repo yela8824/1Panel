@@ -28,12 +28,20 @@ export const Languages = [
         value: ['json'],
     },
     {
+        label: 'lua',
+        value: ['lua'],
+    },
+    {
         label: 'markdown',
         value: ['md'],
     },
     {
         label: 'yaml',
         value: ['yml', 'yaml'],
+    },
+    {
+        label: 'xml',
+        value: ['xml'],
     },
     {
         label: 'php',
@@ -145,7 +153,11 @@ export const DNSTypes = [
         value: 'AliYun',
     },
     {
-        label: 'DNSPod',
+        label: i18n.global.t('website.tencentCloud'),
+        value: 'TencentCloud',
+    },
+    {
+        label: 'DNSPod (' + i18n.global.t('ssl.deprecated') + ')',
         value: 'DnsPod',
     },
     {

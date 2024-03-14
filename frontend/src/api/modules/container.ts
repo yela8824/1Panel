@@ -53,6 +53,9 @@ export const inspect = (params: Container.ContainerInspect) => {
 export const searchImage = (params: SearchWithPage) => {
     return http.post<ResPage<Container.ImageInfo>>(`/containers/image/search`, params);
 };
+export const listAllImage = () => {
+    return http.get<Array<Container.ImageInfo>>(`/containers/image/all`);
+};
 export const listImage = () => {
     return http.get<Array<Container.Options>>(`/containers/image`);
 };
@@ -153,7 +156,7 @@ export const upCompose = (params: Container.ComposeCreate) => {
 export const testCompose = (params: Container.ComposeCreate) => {
     return http.post<boolean>(`/containers/compose/test`, params);
 };
-export const composeOperator = (params: Container.ComposeOpration) => {
+export const composeOperator = (params: Container.ComposeOperation) => {
     return http.post(`/containers/compose/operate`, params);
 };
 export const composeUpdate = (params: Container.ComposeUpdate) => {

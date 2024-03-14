@@ -198,6 +198,9 @@ func (u *SettingService) UpdateSSL(c *gin.Context, req dto.SSLUpdate) error {
 		}
 		_ = os.Remove(path.Join(secretDir, "server.crt"))
 		_ = os.Remove(path.Join(secretDir, "server.key"))
+		sID, _ := c.Cookie(constant.SessionName)
+		c.SetCookie(constant.SessionName, sID, 0, "", "", false, true)
+
 		go func() {
 			_, err := cmd.Exec("systemctl restart 1panel.service")
 			if err != nil {
@@ -277,7 +280,7 @@ func (u *SettingService) UpdateSSL(c *gin.Context, req dto.SSLUpdate) error {
 	if err := fileOp.WriteFile(path.Join(secretDir, "server.key.tmp"), strings.NewReader(key), 0600); err != nil {
 		return err
 	}
-	if err := checkCertValid(req.Domain); err != nil {
+	if err := checkCertValid(); err != nil {
 		return err
 	}
 	if err := fileOp.Rename(path.Join(secretDir, "server.crt.tmp"), path.Join(secretDir, "server.crt")); err != nil {
@@ -289,6 +292,9 @@ func (u *SettingService) UpdateSSL(c *gin.Context, req dto.SSLUpdate) error {
 	if err := settingRepo.Update("SSL", req.SSL); err != nil {
 		return err
 	}
+
+	sID, _ := c.Cookie(constant.SessionName)
+	c.SetCookie(constant.SessionName, sID, 0, "", "", true, true)
 	go func() {
 		time.Sleep(1 * time.Second)
 		_, err := cmd.Exec("systemctl restart 1panel.service")
@@ -412,7 +418,7 @@ func loadInfoFromCert() (*dto.SSLInfo, error) {
 	}, nil
 }
 
-func checkCertValid(domain string) error {
+func checkCertValid() error {
 	certificate, err := os.ReadFile(path.Join(global.CONF.System.BaseDir, "1panel/secret/server.crt.tmp"))
 	if err != nil {
 		return err

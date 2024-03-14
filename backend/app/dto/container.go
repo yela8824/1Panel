@@ -4,11 +4,12 @@ import "time"
 
 type PageContainer struct {
 	PageInfo
-	Name    string `json:"name"`
-	State   string `json:"state" validate:"required,oneof=all created running paused restarting removing exited dead"`
-	OrderBy string `json:"orderBy"`
-	Order   string `json:"order"`
-	Filters string `json:"filters"`
+	Name            string `json:"name"`
+	State           string `json:"state" validate:"required,oneof=all created running paused restarting removing exited dead"`
+	OrderBy         string `json:"orderBy"`
+	Order           string `json:"order"`
+	Filters         string `json:"filters"`
+	ExcludeAppStore bool   `json:"excludeAppStore"`
 }
 
 type InspectReq struct {
@@ -30,11 +31,15 @@ type ContainerInfo struct {
 
 	IsFromApp     bool `json:"isFromApp"`
 	IsFromCompose bool `json:"isFromCompose"`
+
+	AppName        string   `json:"appName"`
+	AppInstallName string   `json:"appInstallName"`
+	Websites       []string `json:"websites"`
 }
 
 type ResourceLimit struct {
-	CPU    int `json:"cpu"`
-	Memory int `json:"memory"`
+	CPU    int    `json:"cpu"`
+	Memory uint64 `json:"memory"`
 }
 
 type ContainerOperate struct {

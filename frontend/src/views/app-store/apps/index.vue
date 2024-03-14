@@ -50,23 +50,14 @@
                     </div>
                 </el-col>
                 <el-col :xs="24" :sm="4" :md="4" :lg="4" :xl="4">
-                    <div class="search-button">
-                        <el-input
-                            v-model="req.name"
-                            clearable
-                            @clear="searchByName('')"
-                            suffix-icon="Search"
-                            @change="searchByName(req.name)"
-                            :placeholder="$t('commons.button.search')"
-                        ></el-input>
-                    </div>
+                    <TableSearch @search="searchByName()" v-model:searchName="req.name" />
                 </el-col>
             </el-row>
         </template>
         <template #rightButton>
             <div class="flex justify-end">
                 <div class="mr-10">
-                    <el-checkbox v-model="req.resource" true-label="all" false-label="remote" @change="search(req)">
+                    <el-checkbox v-model="req.resource" true-value="all" false-value="remote" @change="search(req)">
                         {{ $t('app.showLocal') }}
                     </el-checkbox>
                 </div>
@@ -298,8 +289,7 @@ const getTagValue = (key: string) => {
     }
 };
 
-const searchByName = (name: string) => {
-    req.name = name;
+const searchByName = () => {
     search(req);
 };
 
@@ -361,15 +351,13 @@ onMounted(() => {
 
         .app-desc {
             margin-top: 8px;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-
-            text-overflow: ellipsis;
             height: 43px;
-
             .desc {
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                text-overflow: ellipsis;
                 font-size: 14px;
                 color: var(--el-text-color-regular);
             }

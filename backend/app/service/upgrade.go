@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 	"time"
 
@@ -133,24 +132,24 @@ func (u *UpgradeService) Upgrade(req dto.Upgrade) error {
 
 		if err := cpBinary([]string{tmpDir + "/1panel"}, "/usr/local/bin/1panel"); err != nil {
 			global.LOG.Errorf("upgrade 1panel failed, err: %v", err)
-			u.handleRollback(fileOp, originalDir, 1)
+			u.handleRollback(originalDir, 1)
 			return
 		}
 
 		if err := cpBinary([]string{tmpDir + "/1pctl"}, "/usr/local/bin/1pctl"); err != nil {
 			global.LOG.Errorf("upgrade 1pctl failed, err: %v", err)
-			u.handleRollback(fileOp, originalDir, 2)
+			u.handleRollback(originalDir, 2)
 			return
 		}
 		if _, err := cmd.Execf("sed -i -e 's#BASE_DIR=.*#BASE_DIR=%s#g' /usr/local/bin/1pctl", global.CONF.System.BaseDir); err != nil {
 			global.LOG.Errorf("upgrade basedir in 1pctl failed, err: %v", err)
-			u.handleRollback(fileOp, originalDir, 2)
+			u.handleRollback(originalDir, 2)
 			return
 		}
 
 		if err := cpBinary([]string{tmpDir + "/1panel.service"}, "/etc/systemd/system/1panel.service"); err != nil {
 			global.LOG.Errorf("upgrade 1panel.service failed, err: %v", err)
-			u.handleRollback(fileOp, originalDir, 3)
+			u.handleRollback(originalDir, 3)
 			return
 		}
 
@@ -158,6 +157,7 @@ func (u *UpgradeService) Upgrade(req dto.Upgrade) error {
 		go writeLogs(req.Version)
 		_ = settingRepo.Update("SystemVersion", req.Version)
 		_ = settingRepo.Update("SystemStatus", "Free")
+		checkPointOfWal()
 		_, _ = cmd.ExecWithTimeOut("systemctl daemon-reload && systemctl restart 1panel.service", 1*time.Minute)
 	}()
 	return nil
@@ -180,7 +180,7 @@ func (u *UpgradeService) handleBackup(fileOp files.FileOp, originalDir string) e
 	return nil
 }
 
-func (u *UpgradeService) handleRollback(fileOp files.FileOp, originalDir string, errStep int) {
+func (u *UpgradeService) handleRollback(originalDir string, errStep int) {
 	dbPath := global.CONF.System.DbPath + "/1Panel.db"
 	_ = settingRepo.Update("SystemStatus", "Free")
 	if err := cpBinary([]string{originalDir + "/1Panel.db"}, dbPath); err != nil {
@@ -249,19 +249,24 @@ func (u *UpgradeService) loadReleaseNotes(path string) (string, error) {
 }
 
 func loadArch() (string, error) {
-	switch runtime.GOARCH {
-	case "amd64", "ppc64le", "s390x", "arm64":
-		return runtime.GOARCH, nil
-	case "arm":
-		std, err := cmd.Exec("uname -m")
-		if err != nil {
-			return "", fmt.Errorf("std: %s, err: %s", std, err.Error())
-		}
-		if std == "armv7l\n" {
-			return "armv7", nil
-		}
-		return "", fmt.Errorf("unsupport such arch: arm-%s", std)
-	default:
-		return "", fmt.Errorf("unsupport such arch: %s", runtime.GOARCH)
+	std, err := cmd.Exec("uname -a")
+	if err != nil {
+		return "", fmt.Errorf("std: %s, err: %s", std, err.Error())
 	}
+	if strings.Contains(std, "x86_64") {
+		return "amd64", nil
+	}
+	if strings.Contains(std, "arm64") || strings.Contains(std, "aarch64") {
+		return "arm64", nil
+	}
+	if strings.Contains(std, "armv7l") {
+		return "armv7", nil
+	}
+	if strings.Contains(std, "ppc64le") {
+		return "ppc64le", nil
+	}
+	if strings.Contains(std, "s390x") {
+		return "s390x", nil
+	}
+	return "", fmt.Errorf("unsupported such arch: %s", std)
 }

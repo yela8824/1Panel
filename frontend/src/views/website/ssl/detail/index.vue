@@ -5,9 +5,9 @@
         </template>
         <div v-loading="loading">
             <el-radio-group v-model="curr">
-                <el-radio-button label="detail">{{ $t('ssl.msg') }}</el-radio-button>
-                <el-radio-button label="ssl">{{ $t('ssl.ssl') }}</el-radio-button>
-                <el-radio-button label="key">{{ $t('ssl.key') }}</el-radio-button>
+                <el-radio-button value="detail">{{ $t('ssl.msg') }}</el-radio-button>
+                <el-radio-button value="ssl">{{ $t('ssl.ssl') }}</el-radio-button>
+                <el-radio-button value="key">{{ $t('ssl.key') }}</el-radio-button>
             </el-radio-group>
             <div v-if="curr === 'detail'" class="mt-5">
                 <el-descriptions border :column="1">
@@ -37,7 +37,7 @@
                         v-if="ssl.dnsAccount && ssl.dnsAccount.id > 0"
                     >
                         {{ ssl.dnsAccount.name }}
-                        <el-tag type="info">{{ ssl.dnsAccount.type }}</el-tag>
+                        <el-tag type="info">{{ getDNSName(ssl.dnsAccount.type) }}</el-tag>
                     </el-descriptions-item>
                     <el-descriptions-item
                         :label="$t('ssl.acmeAccount')"
@@ -51,19 +51,14 @@
                 </el-descriptions>
             </div>
             <div v-else-if="curr === 'ssl'" class="mt-5">
-                <el-input v-model="ssl.pem" :autosize="{ minRows: 15, maxRows: 30 }" type="textarea" id="textArea" />
+                <el-input v-model="ssl.pem" :rows="15" type="textarea" id="textArea" />
                 <div>
                     <br />
                     <CopyButton :content="ssl.pem" />
                 </div>
             </div>
             <div v-else class="mt-5">
-                <el-input
-                    v-model="ssl.privateKey"
-                    :autosize="{ minRows: 15, maxRows: 30 }"
-                    type="textarea"
-                    id="textArea"
-                />
+                <el-input v-model="ssl.privateKey" :rows="15" type="textarea" id="textArea" />
                 <div>
                     <br />
                     <CopyButton :content="ssl.privateKey" />
@@ -76,7 +71,7 @@
 import DrawerHeader from '@/components/drawer-header/index.vue';
 import { GetSSL } from '@/api/modules/website';
 import { ref } from 'vue';
-import { dateFormatSimple, getProvider } from '@/utils/util';
+import { dateFormatSimple, getProvider, getDNSName } from '@/utils/util';
 
 const open = ref(false);
 const id = ref(0);

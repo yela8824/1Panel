@@ -63,13 +63,15 @@ func (r *Local) CreateUser(info CreateInfo, withDeleteDB bool) error {
 			if strings.Contains(strings.ToLower(err.Error()), "error 1396") {
 				return buserr.New(constant.ErrUserIsExist)
 			}
-			_ = r.Delete(DeleteInfo{
-				Name:        info.Name,
-				Version:     info.Version,
-				Username:    info.Username,
-				Permission:  info.Permission,
-				ForceDelete: true,
-				Timeout:     300})
+			if withDeleteDB {
+				_ = r.Delete(DeleteInfo{
+					Name:        info.Name,
+					Version:     info.Version,
+					Username:    info.Username,
+					Permission:  info.Permission,
+					ForceDelete: true,
+					Timeout:     300})
+			}
 			return err
 		}
 		grantStr := fmt.Sprintf("grant all privileges on `%s`.* to %s", info.Name, user)
@@ -82,13 +84,15 @@ func (r *Local) CreateUser(info CreateInfo, withDeleteDB bool) error {
 			grantStr = grantStr + " with grant option;"
 		}
 		if err := r.ExecSQL(grantStr, info.Timeout); err != nil {
-			_ = r.Delete(DeleteInfo{
-				Name:        info.Name,
-				Version:     info.Version,
-				Username:    info.Username,
-				Permission:  info.Permission,
-				ForceDelete: true,
-				Timeout:     300})
+			if withDeleteDB {
+				_ = r.Delete(DeleteInfo{
+					Name:        info.Name,
+					Version:     info.Version,
+					Username:    info.Username,
+					Permission:  info.Permission,
+					ForceDelete: true,
+					Timeout:     300})
+			}
 			return err
 		}
 	}
@@ -307,19 +311,6 @@ func (r *Local) SyncDB(version string) ([]SyncDBInfo, error) {
 			}
 		}
 		if len(dataItem.Username) == 0 {
-			dataItem.Username = loadNameByDB(parts[0], version)
-			dataItem.Password = randomPassword(dataItem.Username)
-			if err := r.CreateUser(CreateInfo{
-				Name:       parts[0],
-				Format:     parts[1],
-				Version:    version,
-				Username:   dataItem.Username,
-				Password:   dataItem.Password,
-				Permission: "%",
-				Timeout:    300,
-			}, false); err != nil {
-				global.LOG.Errorf("sync from remote server failed, err: create user failed %v", err)
-			}
 			dataItem.Permission = "%"
 		} else {
 			if isLocal {

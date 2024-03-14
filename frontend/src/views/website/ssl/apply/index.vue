@@ -18,7 +18,7 @@
                 <el-table-column prop="resolve" :label="$t('ssl.resolveDomain')">
                     <template #default="{ row }">
                         <span>{{ row.resolve }}</span>
-                        <CopyButton :content="row.value" type="icon" />
+                        <CopyButton :content="row.resolve" type="icon" />
                     </template>
                 </el-table-column>
                 <el-table-column prop="value" :label="$t('ssl.value')">
@@ -29,6 +29,11 @@
                 </el-table-column>
                 <el-table-column :label="$t('commons.table.type')">TXT</el-table-column>
             </el-table>
+        </div>
+
+        <div class="mt-3">
+            <el-checkbox v-model="skipDNSCheck">{{ $t('ssl.skipDNSCheck') }}</el-checkbox>
+            <span class="input-help">{{ $t('ssl.skipDNSCheckHelper') }}</span>
         </div>
 
         <template #footer>
@@ -62,11 +67,13 @@ const handleClose = () => {
     open.value = false;
     em('close', false);
 };
+const skipDNSCheck = ref(false);
 
 const acceptParams = async (props: RenewProps) => {
     open.value = true;
     dnsResolve.value = [];
     sslID.value = props.ssl.id;
+    skipDNSCheck.value = false;
     getDnsResolve(props.ssl);
 };
 
@@ -89,7 +96,7 @@ const getDnsResolve = async (row: Website.SSL) => {
 };
 
 const submit = () => {
-    ObtainSSL({ ID: sslID.value })
+    ObtainSSL({ ID: sslID.value, skipDNSCheck: skipDNSCheck.value })
         .then(() => {
             MsgSuccess(i18n.global.t('ssl.applyStart'));
             handleClose();

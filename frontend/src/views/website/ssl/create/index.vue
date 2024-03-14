@@ -26,11 +26,7 @@
                         </el-col>
                     </el-row>
                     <el-form-item :label="$t('website.otherDomains')" prop="otherDomains">
-                        <el-input
-                            type="textarea"
-                            :autosize="{ minRows: 2, maxRows: 6 }"
-                            v-model="ssl.otherDomains"
-                        ></el-input>
+                        <el-input type="textarea" :rows="3" v-model="ssl.otherDomains"></el-input>
                     </el-form-item>
                     <el-form-item :label="$t('website.remark')" prop="description">
                         <el-input v-model="ssl.description"></el-input>
@@ -40,9 +36,20 @@
                             <el-option
                                 v-for="(acme, index) in acmeAccounts"
                                 :key="index"
-                                :label="acme.email"
+                                :label="acme.email + ' [' + getAccountName(acme.type) + '] '"
                                 :value="acme.id"
-                            ></el-option>
+                            >
+                                <el-row>
+                                    <el-col :span="6">
+                                        <span>{{ acme.email }}</span>
+                                    </el-col>
+                                    <el-col :span="11">
+                                        <span>
+                                            <el-tag type="success">{{ getAccountName(acme.type) }}</el-tag>
+                                        </span>
+                                    </el-col>
+                                </el-row>
+                            </el-option>
                         </el-select>
                     </el-form-item>
                     <el-form-item :label="$t('website.keyType')" prop="keyType">
@@ -57,9 +64,9 @@
                     </el-form-item>
                     <el-form-item :label="$t('website.provider')" prop="provider">
                         <el-radio-group v-model="ssl.provider" @change="changeProvider()">
-                            <el-radio label="dnsAccount">{{ $t('website.dnsAccount') }}</el-radio>
-                            <el-radio label="dnsManual">{{ $t('website.dnsManual') }}</el-radio>
-                            <el-radio label="http">HTTP</el-radio>
+                            <el-radio value="dnsAccount">{{ $t('website.dnsAccount') }}</el-radio>
+                            <el-radio value="dnsManual">{{ $t('website.dnsManual') }}</el-radio>
+                            <el-radio value="http">HTTP</el-radio>
                         </el-radio-group>
                         <span class="input-help" v-if="ssl.provider === 'dnsManual'">
                             {{ $t('ssl.dnsMauanlHelper') }}
@@ -80,7 +87,7 @@
                             <el-option
                                 v-for="(dns, index) in dnsAccounts"
                                 :key="index"
-                                :label="dns.name"
+                                :label="dns.name + ' [' + getDNSName(dns.type) + '] '"
                                 :value="dns.id"
                             >
                                 <el-row>
@@ -89,7 +96,7 @@
                                     </el-col>
                                     <el-col :span="11">
                                         <span>
-                                            <el-tag type="success">{{ dns.type }}</el-tag>
+                                            <el-tag type="success">{{ getDNSName(dns.type) }}</el-tag>
                                         </span>
                                     </el-col>
                                 </el-row>
@@ -136,6 +143,7 @@ import { FormInstance } from 'element-plus';
 import { computed, reactive, ref } from 'vue';
 import { MsgSuccess } from '@/utils/message';
 import { KeyTypes } from '@/global/mimetype';
+import { getDNSName, getAccountName } from '@/utils/util';
 
 const props = defineProps({
     id: {

@@ -196,6 +196,12 @@ func (u *FirewallService) OperateFirewall(operation string) error {
 		}
 		_, _ = cmd.Exec("systemctl restart docker")
 		return nil
+	case "restart":
+		if err := client.Restart(); err != nil {
+			return err
+		}
+		_, _ = cmd.Exec("systemctl restart docker")
+		return nil
 	case "disablePing":
 		return u.updatePingStatus("0")
 	case "enablePing":
@@ -580,24 +586,6 @@ func (u *FirewallService) addAddressRecord(req dto.AddrRuleOperate) error {
 		return fmt.Errorf("add record failed (strategy: %s, address: %s), err: %v", req.Strategy, req.Address, err)
 	}
 	return nil
-}
-
-func listIpRules(strategy string) ([]string, error) {
-	client, err := firewall.NewFirewallClient()
-	if err != nil {
-		return nil, err
-	}
-	addrs, err := client.ListAddress()
-	if err != nil {
-		return nil, err
-	}
-	var rules []string
-	for _, addr := range addrs {
-		if addr.Strategy == strategy {
-			rules = append(rules, addr.Address)
-		}
-	}
-	return rules, nil
 }
 
 func checkPortUsed(ports, proto string, apps []portOfApp) string {

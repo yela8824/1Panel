@@ -10,10 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/1Panel-dev/1Panel/backend/buserr"
+
 	"github.com/1Panel-dev/1Panel/backend/app/dto"
 	"github.com/1Panel-dev/1Panel/backend/app/model"
 	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/global"
+	"github.com/1Panel-dev/1Panel/backend/utils/common"
 	"github.com/1Panel-dev/1Panel/backend/utils/compose"
 	"github.com/1Panel-dev/1Panel/backend/utils/files"
 	"github.com/pkg/errors"
@@ -33,10 +36,10 @@ func (u *BackupService) AppBackup(req dto.CommonBackup) error {
 		return err
 	}
 	timeNow := time.Now().Format("20060102150405")
+	itemDir := fmt.Sprintf("app/%s/%s", req.Name, req.DetailName)
+	backupDir := path.Join(localDir, itemDir)
 
-	backupDir := path.Join(localDir, fmt.Sprintf("app/%s/%s", req.Name, req.DetailName))
-
-	fileName := fmt.Sprintf("%s_%s.tar.gz", req.DetailName, timeNow)
+	fileName := fmt.Sprintf("%s_%s.tar.gz", req.DetailName, timeNow+common.RandStrAndNum(5))
 	if err := handleAppBackup(&install, backupDir, fileName); err != nil {
 		return err
 	}
@@ -47,7 +50,7 @@ func (u *BackupService) AppBackup(req dto.CommonBackup) error {
 		DetailName: req.DetailName,
 		Source:     "LOCAL",
 		BackupType: "LOCAL",
-		FileDir:    backupDir,
+		FileDir:    itemDir,
 		FileName:   fileName,
 	}
 
@@ -70,7 +73,7 @@ func (u *BackupService) AppRecover(req dto.CommonRecover) error {
 
 	fileOp := files.NewFileOp()
 	if !fileOp.Stat(req.File) {
-		return errors.New(fmt.Sprintf("%s file is not exist", req.File))
+		return buserr.WithName("ErrFileNotFound", req.File)
 	}
 	if _, err := compose.Down(install.GetComposePath()); err != nil {
 		return err
@@ -106,12 +109,21 @@ func handleAppBackup(install *model.AppInstall, backupDir, fileName string) erro
 
 	resources, _ := appInstallResourceRepo.GetBy(appInstallResourceRepo.WithAppInstallId(install.ID))
 	for _, resource := range resources {
-		if resource.Key == "mysql" || resource.Key == "mariadb" {
+		switch resource.Key {
+		case constant.AppMysql, constant.AppMariaDB:
 			db, err := mysqlRepo.Get(commonRepo.WithByID(resource.ResourceId))
 			if err != nil {
 				return err
 			}
-			if err := handleMysqlBackup(db.MysqlName, db.Name, tmpDir, fmt.Sprintf("%s.sql.gz", install.Name)); err != nil {
+			if err := handleMysqlBackup(db.MysqlName, resource.Key, db.Name, tmpDir, fmt.Sprintf("%s.sql.gz", install.Name)); err != nil {
+				return err
+			}
+		case constant.AppPostgresql:
+			db, err := postgresqlRepo.Get(commonRepo.WithByID(resource.ResourceId))
+			if err != nil {
+				return err
+			}
+			if err := handlePostgresqlBackup(db.PostgresqlName, db.Name, tmpDir, fmt.Sprintf("%s.sql.gz", install.Name)); err != nil {
 				return err
 			}
 		}
@@ -190,7 +202,21 @@ func handleAppRecover(install *model.AppInstall, recoverFile string, isRollback 
 				return err
 			}
 		}
-		if database.Type == "mysql" || database.Type == "mariadb" {
+		switch database.Type {
+		case constant.AppPostgresql:
+			db, err := postgresqlRepo.Get(commonRepo.WithByID(resource.ResourceId))
+			if err != nil {
+				return err
+			}
+			if err := handlePostgresqlRecover(dto.CommonRecover{
+				Name:       database.Name,
+				DetailName: db.Name,
+				File:       fmt.Sprintf("%s/%s.sql.gz", tmpPath, install.Name),
+			}, true); err != nil {
+				global.LOG.Errorf("handle recover from sql.gz failed, err: %v", err)
+				return err
+			}
+		case constant.AppMysql, constant.AppMariaDB:
 			db, err := mysqlRepo.Get(commonRepo.WithByID(resource.ResourceId))
 			if err != nil {
 				return err
@@ -234,7 +260,7 @@ func handleAppRecover(install *model.AppInstall, recoverFile string, isRollback 
 	_ = fileOp.DeleteDir(backPath)
 
 	if len(newEnvFile) != 0 {
-		envPath := fmt.Sprintf("%s/%s/%s/.env", constant.AppInstallDir, install.App.Key, install.Name)
+		envPath := fmt.Sprintf("%s/%s/.env", install.GetAppPath(), install.Name)
 		file, err := os.OpenFile(envPath, os.O_WRONLY|os.O_TRUNC, 0640)
 		if err != nil {
 			return err
@@ -278,6 +304,10 @@ func reCreateDB(dbID uint, database model.Database, oldEnv string) (*model.Datab
 		Password:   oldPassword,
 		Permission: "%",
 	})
+	cronjobs, _ := cronjobRepo.List(cronjobRepo.WithByDbName(fmt.Sprintf("%v", dbID)))
+	for _, job := range cronjobs {
+		_ = cronjobRepo.Update(job.ID, map[string]interface{}{"db_name": fmt.Sprintf("%v", createDB.ID)})
+	}
 	if err != nil {
 		return nil, envMap, err
 	}

@@ -29,17 +29,7 @@
                     </el-col>
                     <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
                         <TableSetting @search="search()" />
-                        <div class="search-button">
-                            <el-input
-                                clearable
-                                v-model="searchName"
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
+                        <TableSearch @search="search()" v-model:searchName="searchName" />
                     </el-col>
                 </el-row>
             </template>
@@ -81,47 +71,67 @@
                     </el-table-column>
                     <el-table-column :label="$t('cronjob.cronSpec')" show-overflow-tooltip :min-width="120">
                         <template #default="{ row }">
-                            <span v-if="row.specType.indexOf('N') === -1 || row.specType === 'perWeek'">
-                                {{ $t('cronjob.' + row.specType) }}&nbsp;
-                            </span>
-                            <span v-else>{{ $t('cronjob.per') }}</span>
-                            <span v-if="row.specType === 'perMonth'">
-                                {{ row.day }}{{ $t('cronjob.day') }} {{ loadZero(row.hour) }} :
-                                {{ loadZero(row.minute) }}
-                            </span>
-                            <span v-if="row.specType === 'perWeek'">
-                                {{ loadWeek(row.week) }} {{ loadZero(row.hour) }} : {{ loadZero(row.minute) }}
-                            </span>
-                            <span v-if="row.specType === 'perDay'">
-                                &#32;{{ loadZero(row.hour) }} : {{ loadZero(row.minute) }}
-                            </span>
-                            <span v-if="row.specType === 'perNDay'">
-                                {{ row.day }} {{ $t('commons.units.day') }}, {{ loadZero(row.hour) }} :
-                                {{ loadZero(row.minute) }}
-                            </span>
-                            <span v-if="row.specType === 'perNHour'">
-                                {{ row.hour }}{{ $t('commons.units.hour') }}, {{ loadZero(row.minute) }}
-                            </span>
-                            <span v-if="row.specType === 'perHour'">{{ loadZero(row.minute) }}</span>
-                            <span v-if="row.specType === 'perNMinute'">
-                                {{ row.minute }}{{ $t('commons.units.minute') }}
-                            </span>
-                            <span v-if="row.specType === 'perNSecond'">
-                                {{ row.second }}{{ $t('commons.units.second') }}
-                            </span>
-                            {{ $t('cronjob.handle') }}
+                            <div v-for="(item, index) of row.spec.split(',')" :key="index">
+                                <div v-if="row.expand || (!row.expand && index < 3)">
+                                    <span>
+                                        {{ transSpecToStr(item) }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div v-if="!row.expand && row.spec.split(',').length > 3">
+                                <el-button type="primary" link @click="row.expand = true">
+                                    {{ $t('commons.button.expand') }}...
+                                </el-button>
+                            </div>
+                            <div v-if="row.expand && row.spec.split(',').length > 3">
+                                <el-button type="primary" link @click="row.expand = false">
+                                    {{ $t('commons.button.collapse') }}
+                                </el-button>
+                            </div>
                         </template>
                     </el-table-column>
-                    <el-table-column :label="$t('cronjob.retainCopies')" :min-width="90" prop="retainCopies" />
-
+                    <el-table-column :label="$t('cronjob.retainCopies')" :min-width="90" prop="retainCopies">
+                        <template #default="{ row }">
+                            <el-button v-if="hasBackup(row.type)" @click="loadBackups(row)" plain size="small">
+                                {{ row.retainCopies }}{{ $t('cronjob.retainCopiesUnit') }}
+                            </el-button>
+                            <span v-else>{{ row.retainCopies }}</span>
+                        </template>
+                    </el-table-column>
                     <el-table-column :label="$t('cronjob.lastRecordTime')" :min-width="120" prop="lastRecordTime">
                         <template #default="{ row }">
                             {{ row.lastRecordTime }}
                         </template>
                     </el-table-column>
-                    <el-table-column :min-width="80" :label="$t('cronjob.target')" prop="targetDir">
+                    <el-table-column :min-width="80" :label="$t('setting.backupAccount')" prop="defaultDownload">
                         <template #default="{ row }">
-                            {{ row.targetDir }}
+                            <div v-for="(item, index) of row.backupAccounts?.split(',')" :key="index">
+                                <div v-if="row.accountExpand || (!row.accountExpand && index < 3)">
+                                    <span v-if="row.backupAccounts">
+                                        <span>
+                                            {{ $t('setting.' + item) }}
+                                        </span>
+                                        <el-icon
+                                            size="12"
+                                            v-if="item === row.defaultDownload"
+                                            class="relative top-px left-1"
+                                        >
+                                            <Star />
+                                        </el-icon>
+                                    </span>
+                                    <span v-else>-</span>
+                                </div>
+                            </div>
+                            <div v-if="!row.accountExpand && row.backupAccounts?.split(',').length > 3">
+                                <el-button type="primary" link @click="row.accountExpand = true">
+                                    {{ $t('commons.button.expand') }}...
+                                </el-button>
+                            </div>
+                            <div v-if="row.accountExpand && row.backupAccounts?.split(',').length > 3">
+                                <el-button type="primary" link @click="row.accountExpand = false">
+                                    {{ $t('commons.button.collapse') }}
+                                </el-button>
+                            </div>
                         </template>
                     </el-table-column>
                     <fu-table-operations
@@ -149,22 +159,21 @@
         </OpDialog>
         <OperateDialog @search="search" ref="dialogRef" />
         <Records @search="search" ref="dialogRecordRef" />
+        <Backups @search="search" ref="dialogBackupRef" />
     </div>
 </template>
 
 <script lang="ts" setup>
-import OpDialog from '@/components/del-dialog/index.vue';
-import TableSetting from '@/components/table-setting/index.vue';
-import Tooltip from '@/components/tooltip/index.vue';
 import OperateDialog from '@/views/cronjob/operate/index.vue';
 import Records from '@/views/cronjob/record/index.vue';
-import { loadZero } from '@/utils/util';
+import Backups from '@/views/cronjob/backup/index.vue';
 import { onMounted, reactive, ref } from 'vue';
 import { deleteCronjob, getCronjobPage, handleOnce, updateStatus } from '@/api/modules/cronjob';
 import i18n from '@/lang';
 import { Cronjob } from '@/api/interface/cronjob';
 import { ElMessageBox } from 'element-plus';
 import { MsgSuccess } from '@/utils/message';
+import { transSpecToStr } from './helper';
 
 const loading = ref();
 const selects = ref<any>([]);
@@ -186,16 +195,6 @@ const paginationConfig = reactive({
 });
 const searchName = ref();
 
-const weekOptions = [
-    { label: i18n.global.t('cronjob.monday'), value: 1 },
-    { label: i18n.global.t('cronjob.tuesday'), value: 2 },
-    { label: i18n.global.t('cronjob.wednesday'), value: 3 },
-    { label: i18n.global.t('cronjob.thursday'), value: 4 },
-    { label: i18n.global.t('cronjob.friday'), value: 5 },
-    { label: i18n.global.t('cronjob.saturday'), value: 6 },
-    { label: i18n.global.t('cronjob.sunday'), value: 0 },
-];
-
 const search = async (column?: any) => {
     paginationConfig.orderBy = column?.order ? column.prop : paginationConfig.orderBy;
     paginationConfig.order = column?.order ? column.order : paginationConfig.order;
@@ -212,9 +211,16 @@ const search = async (column?: any) => {
             loading.value = false;
             data.value = res.data.items || [];
             for (const item of data.value) {
-                if (item.targetDir !== '-' && item.targetDir !== '') {
-                    item.targetDir = i18n.global.t('setting.' + item.targetDir);
+                let itemAccounts = item.backupAccounts.split(',') || [];
+                let accounts = [];
+                for (const account of itemAccounts) {
+                    if (account == item.defaultDownload) {
+                        accounts.unshift(account);
+                    } else {
+                        accounts.push(account);
+                    }
                 }
+                item.itemAccounts = accounts.join(',');
             }
             paginationConfig.total = res.data.total;
         })
@@ -224,19 +230,23 @@ const search = async (column?: any) => {
 };
 
 const dialogRecordRef = ref();
+const dialogBackupRef = ref();
 
 const dialogRef = ref();
 const onOpenDialog = async (
     title: string,
     rowData: Partial<Cronjob.CronjobInfo> = {
-        specType: 'perMonth',
+        specObjs: [
+            {
+                specType: 'perMonth',
+                week: 1,
+                day: 3,
+                hour: 1,
+                minute: 30,
+                second: 30,
+            },
+        ],
         type: 'shell',
-        week: 1,
-        day: 3,
-        hour: 1,
-        minute: 30,
-        second: 30,
-        keepLocal: true,
         retainCopies: 7,
     },
 ) => {
@@ -281,9 +291,16 @@ const onDelete = async (row: Cronjob.CronjobInfo | null) => {
 };
 
 const onSubmitDelete = async () => {
-    await deleteCronjob({ ids: operateIDs.value, cleanData: cleanData.value });
-    MsgSuccess(i18n.global.t('commons.msg.deleteSuccess'));
-    search();
+    loading.value = true;
+    await deleteCronjob({ ids: operateIDs.value, cleanData: cleanData.value })
+        .then(() => {
+            loading.value = false;
+            MsgSuccess(i18n.global.t('commons.msg.deleteSuccess'));
+            search();
+        })
+        .catch(() => {
+            loading.value = false;
+        });
 };
 
 const onChangeStatus = async (id: number, status: string) => {
@@ -310,6 +327,10 @@ const onBatchChangeStatus = async (status: string) => {
         MsgSuccess(i18n.global.t('commons.msg.operationSuccess'));
         search();
     });
+};
+
+const loadBackups = async (row: any) => {
+    dialogBackupRef.value!.acceptParams({ cronjobID: row.id, cronjob: row.name });
 };
 
 const onHandle = async (row: Cronjob.CronjobInfo) => {
@@ -370,14 +391,7 @@ const buttons = [
         },
     },
 ];
-function loadWeek(i: number) {
-    for (const week of weekOptions) {
-        if (week.value === i) {
-            return week.label;
-        }
-    }
-    return '';
-}
+
 onMounted(() => {
     search();
 });

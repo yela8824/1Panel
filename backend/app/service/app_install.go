@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/1Panel-dev/1Panel/backend/i18n"
-
 	"github.com/1Panel-dev/1Panel/backend/utils/files"
 	"gopkg.in/yaml.v3"
 
@@ -152,7 +150,7 @@ func (a *AppInstallService) CheckExist(req request.AppInstalledInfo) (*response.
 	if reflect.DeepEqual(appInstall, model.AppInstall{}) {
 		return res, nil
 	}
-	if err = syncByID(appInstall.ID); err != nil {
+	if err = syncAppInstallStatus(&appInstall); err != nil {
 		return nil, err
 	}
 
@@ -184,9 +182,11 @@ func (a *AppInstallService) LoadConnInfo(req dto.OperationWithNameAndType) (resp
 	if err != nil {
 		return data, nil
 	}
+	data.Username = app.UserName
 	data.Password = app.Password
 	data.ServiceName = app.ServiceName
 	data.Port = app.Port
+	data.ContainerName = app.ContainerName
 	return data, nil
 }
 
@@ -240,28 +240,28 @@ func (a *AppInstallService) Operate(req request.AppInstalledOperate) error {
 		if err != nil {
 			return handleErr(install, err, out)
 		}
-		return syncByID(install.ID)
+		return syncAppInstallStatus(&install)
 	case constant.Stop:
 		out, err := compose.Stop(dockerComposePath)
 		if err != nil {
 			return handleErr(install, err, out)
 		}
-		return syncByID(install.ID)
+		return syncAppInstallStatus(&install)
 	case constant.Restart:
 		out, err := compose.Restart(dockerComposePath)
 		if err != nil {
 			return handleErr(install, err, out)
 		}
-		return syncByID(install.ID)
+		return syncAppInstallStatus(&install)
 	case constant.Delete:
 		if err := deleteAppInstall(install, req.DeleteBackup, req.ForceDelete, req.DeleteDB); err != nil && !req.ForceDelete {
 			return err
 		}
 		return nil
 	case constant.Sync:
-		return syncByID(install.ID)
+		return syncAppInstallStatus(&install)
 	case constant.Upgrade:
-		return upgradeInstall(install.ID, req.DetailId, req.Backup)
+		return upgradeInstall(install.ID, req.DetailId, req.Backup, req.PullImage)
 	case constant.Reload:
 		return opNginx(install.ContainerName, constant.NginxReload)
 	default:
@@ -411,7 +411,7 @@ func (a *AppInstallService) SyncAll(systemInit bool) error {
 		return err
 	}
 	for _, i := range allList {
-		if i.Status == constant.Installing || i.Status == constant.Upgrading {
+		if i.Status == constant.Installing || i.Status == constant.Upgrading || i.Status == constant.Rebuilding {
 			if systemInit {
 				i.Status = constant.Error
 				i.Message = "1Panel restart causes the task to terminate"
@@ -420,7 +420,7 @@ func (a *AppInstallService) SyncAll(systemInit bool) error {
 			continue
 		}
 		if !systemInit {
-			if err := syncByID(i.ID); err != nil {
+			if err = syncAppInstallStatus(&i); err != nil {
 				global.LOG.Errorf("sync install app[%s] error,mgs: %s", i.Name, err.Error())
 			}
 		}
@@ -431,6 +431,9 @@ func (a *AppInstallService) SyncAll(systemInit bool) error {
 func (a *AppInstallService) GetServices(key string) ([]response.AppService, error) {
 	var res []response.AppService
 	if DatabaseKeys[key] > 0 {
+		if key == constant.AppPostgres {
+			key = constant.AppPostgresql
+		}
 		dbs, _ := databaseRepo.GetList(commonRepo.WithByType(key))
 		if len(dbs) == 0 {
 			return res, nil
@@ -524,7 +527,7 @@ func (a *AppInstallService) ChangeAppPort(req request.PortUpdate) error {
 		return nil
 	}
 
-	if err := updateInstallInfoInDB(req.Key, req.Name, "port", true, strconv.FormatInt(req.Port, 10)); err != nil {
+	if err := updateInstallInfoInDB(req.Key, req.Name, "port", strconv.FormatInt(req.Port, 10)); err != nil {
 		return nil
 	}
 
@@ -636,10 +639,11 @@ func (a *AppInstallService) GetParams(id uint) (*response.AppConfig, error) {
 	for _, form := range appForm.FormFields {
 		if v, ok := envs[form.EnvKey]; ok {
 			appParam := response.AppParam{
-				Edit: false,
-				Key:  form.EnvKey,
-				Rule: form.Rule,
-				Type: form.Type,
+				Edit:     false,
+				Key:      form.EnvKey,
+				Rule:     form.Rule,
+				Type:     form.Type,
+				Multiple: form.Multiple,
 			}
 			if form.Edit {
 				appParam.Edit = true
@@ -651,10 +655,20 @@ func (a *AppInstallService) GetParams(id uint) (*response.AppConfig, error) {
 				appInstall, _ := appInstallRepo.GetFirst(appInstallRepo.WithServiceName(v.(string)))
 				appParam.ShowValue = appInstall.Name
 			} else if form.Type == "select" {
-				for _, fv := range form.Values {
-					if fv.Value == v {
-						appParam.ShowValue = fv.Label
-						break
+				if form.Multiple {
+					if v == "" {
+						appParam.Value = []string{}
+					} else {
+						if str, ok := v.(string); ok {
+							appParam.Value = strings.Split(str, ",")
+						}
+					}
+				} else {
+					for _, fv := range form.Values {
+						if fv.Value == v {
+							appParam.ShowValue = fv.Label
+							break
+						}
 					}
 				}
 				appParam.Values = form.Values
@@ -662,14 +676,15 @@ func (a *AppInstallService) GetParams(id uint) (*response.AppConfig, error) {
 			params = append(params, appParam)
 		} else {
 			params = append(params, response.AppParam{
-				Edit:    form.Edit,
-				Key:     form.EnvKey,
-				Rule:    form.Rule,
-				Type:    form.Type,
-				LabelZh: form.LabelZh,
-				LabelEn: form.LabelEn,
-				Value:   form.Default,
-				Values:  form.Values,
+				Edit:     form.Edit,
+				Key:      form.EnvKey,
+				Rule:     form.Rule,
+				Type:     form.Type,
+				LabelZh:  form.LabelZh,
+				LabelEn:  form.LabelEn,
+				Value:    form.Default,
+				Values:   form.Values,
+				Multiple: form.Multiple,
 			})
 		}
 	}
@@ -685,15 +700,11 @@ func (a *AppInstallService) GetParams(id uint) (*response.AppConfig, error) {
 	return &res, nil
 }
 
-func syncByID(installID uint) error {
-	appInstall, err := appInstallRepo.GetFirst(commonRepo.WithByID(installID))
-	if err != nil {
-		return err
-	}
-	if appInstall.Status == constant.Installing {
+func syncAppInstallStatus(appInstall *model.AppInstall) error {
+	if appInstall.Status == constant.Installing || appInstall.Status == constant.Rebuilding || appInstall.Status == constant.Upgrading {
 		return nil
 	}
-	containerNames, err := getContainerNames(appInstall)
+	containerNames, err := getContainerNames(*appInstall)
 	if err != nil {
 		return err
 	}
@@ -705,75 +716,69 @@ func syncByID(installID uint) error {
 	if err != nil {
 		return err
 	}
+
 	var (
-		errorContainers    []string
-		notFoundContainers []string
-		runningContainers  []string
-		exitedContainers   []string
+		runningCount         int
+		exitedCount          int
+		pausedCount          int
+		exitedContainerNames []string
+		total                = len(containerNames)
+		count                = len(containers)
 	)
 
-	for _, n := range containers {
-		switch n.State {
+	foundNames := make(map[string]bool)
+	for _, con := range containers {
+		foundNames[con.Names[0]] = true
+		switch con.State {
 		case "exited":
-			exitedContainers = append(exitedContainers, n.Names[0])
+			exitedContainerNames = append(exitedContainerNames, strings.TrimPrefix(con.Names[0], "/"))
+			exitedCount++
 		case "running":
-			runningContainers = append(runningContainers, n.Names[0])
-		default:
-			errorContainers = append(errorContainers, n.Names[0])
+			runningCount++
+		case "paused":
+			pausedCount++
 		}
 	}
+
+	var notFoundNames []string
 	for _, name := range containerNames {
-		exist := false
-		for _, container := range containers {
-			if common.ExistWithStrArray(name, container.Names) {
-				exist = true
-				break
-			}
-		}
-		if !exist {
-			notFoundContainers = append(notFoundContainers, name)
+		if !foundNames["/"+name] {
+			notFoundNames = append(notFoundNames, name)
 		}
 	}
 
-	containerCount := len(containers)
-	errCount := len(errorContainers)
-	notFoundCount := len(notFoundContainers)
-	existedCount := len(exitedContainers)
-	normalCount := len(containerNames)
-	runningCount := len(runningContainers)
-
-	if containerCount == 0 {
-		appInstall.Status = constant.Error
-		appInstall.Message = i18n.GetMsgWithMap("ErrContainerNotFound", map[string]interface{}{"name": strings.Join(containerNames, ",")})
-		return appInstallRepo.Save(context.Background(), &appInstall)
-	}
-	if errCount == 0 && existedCount == 0 && notFoundCount == 0 {
-		appInstall.Status = constant.Running
-		return appInstallRepo.Save(context.Background(), &appInstall)
-	}
-	if existedCount == normalCount {
+	switch {
+	case count == 0:
+		if appInstall.Status != constant.Error {
+			appInstall.Status = constant.SyncErr
+			appInstall.Message = buserr.WithName("ErrContainerNotFound", strings.Join(containerNames, ",")).Error()
+		}
+	case exitedCount == total:
 		appInstall.Status = constant.Stopped
-		return appInstallRepo.Save(context.Background(), &appInstall)
-	}
-	if errCount == normalCount {
-		appInstall.Status = constant.Error
-	}
-	if runningCount < normalCount {
+	case runningCount == total:
+		appInstall.Status = constant.Running
+	case pausedCount == total:
+		appInstall.Status = constant.Paused
+	default:
+		var msg string
+		if exitedCount > 0 {
+			msg = buserr.WithName("ErrContainerMsg", strings.Join(exitedContainerNames, ",")).Error()
+		}
+		if len(notFoundNames) > 0 {
+			msg += buserr.WithName("ErrContainerNotFound", strings.Join(notFoundNames, ",")).Error()
+		}
+		if msg == "" {
+			msg = buserr.New("ErrAppWarn").Error()
+		}
+		appInstall.Message = msg
 		appInstall.Status = constant.UnHealthy
 	}
+	_ = appInstallRepo.Save(context.Background(), appInstall)
 
-	var errMsg string
-	if errCount > 0 {
-		errMsg += i18n.GetMsgWithMap("ErrContainerMsg", map[string]interface{}{"name": strings.Join(errorContainers, ",")})
-	}
-	if notFoundCount > 0 {
-		errMsg += i18n.GetMsgWithMap("ErrContainerNotFound", map[string]interface{}{"name": strings.Join(notFoundContainers, ",")})
-	}
-	appInstall.Message = errMsg
-	return appInstallRepo.Save(context.Background(), &appInstall)
+	return nil
 }
 
-func updateInstallInfoInDB(appKey, appName, param string, isRestart bool, value interface{}) error {
+func updateInstallInfoInDB(appKey, appName, param string, value interface{}) error {
 	if param != "password" && param != "port" && param != "user-password" {
 		return nil
 	}
@@ -781,7 +786,7 @@ func updateInstallInfoInDB(appKey, appName, param string, isRestart bool, value 
 	if err != nil {
 		return nil
 	}
-	envPath := fmt.Sprintf("%s/%s/%s/.env", constant.AppInstallDir, appKey, appInstall.Name)
+	envPath := fmt.Sprintf("%s/%s/.env", appInstall.AppPath, appInstall.Name)
 	lineBytes, err := os.ReadFile(envPath)
 	if err != nil {
 		return err
@@ -790,7 +795,7 @@ func updateInstallInfoInDB(appKey, appName, param string, isRestart bool, value 
 	envKey := ""
 	switch param {
 	case "password":
-		if appKey == "mysql" || appKey == "mariadb" {
+		if appKey == "mysql" || appKey == "mariadb" || appKey == "postgresql" {
 			envKey = "PANEL_DB_ROOT_PASSWORD="
 		} else {
 			envKey = "PANEL_REDIS_ROOT_PASSWORD="

@@ -110,12 +110,13 @@ func checkPortExist(port int) error {
 }
 
 var DatabaseKeys = map[string]uint{
-	"mysql":      3306,
-	"mariadb":    3306,
-	"postgresql": 5432,
-	"mongodb":    27017,
-	"redis":      6379,
-	"memcached":  11211,
+	constant.AppMysql:      3306,
+	constant.AppMariaDB:    3306,
+	constant.AppPostgresql: 5432,
+	constant.AppPostgres:   5432,
+	constant.AppMongodb:    27017,
+	constant.AppRedis:      6379,
+	constant.AppMemcached:  11211,
 }
 
 var ToolKeys = map[string]uint{
@@ -154,7 +155,7 @@ func createLink(ctx context.Context, app model.App, appInstall *model.AppInstall
 		}
 
 		switch app.Key {
-		case "mysql", "mariadb", "postgresql", "mongodb":
+		case constant.AppMysql, constant.AppMariaDB, constant.AppPostgresql, constant.AppMongodb:
 			if password, ok := params["PANEL_DB_ROOT_PASSWORD"]; ok {
 				if password != "" {
 					database.Password = password.(string)
@@ -176,7 +177,7 @@ func createLink(ctx context.Context, app model.App, appInstall *model.AppInstall
 
 				}
 			}
-		case "redis":
+		case constant.AppRedis:
 			if password, ok := params["PANEL_REDIS_ROOT_PASSWORD"]; ok {
 				if password != "" {
 					authParam := dto.RedisAuthParam{
@@ -233,28 +234,55 @@ func createLink(ctx context.Context, app model.App, appInstall *model.AppInstall
 		}
 		var resourceId uint
 		if dbConfig.DbName != "" && dbConfig.DbUser != "" && dbConfig.Password != "" {
-			iMysqlRepo := repo.NewIMysqlRepo()
-			oldMysqlDb, _ := iMysqlRepo.Get(commonRepo.WithByName(dbConfig.DbName), iMysqlRepo.WithByFrom(constant.ResourceLocal))
-			resourceId = oldMysqlDb.ID
-			if oldMysqlDb.ID > 0 {
-				if oldMysqlDb.Username != dbConfig.DbUser || oldMysqlDb.Password != dbConfig.Password {
-					return buserr.New(constant.ErrDbUserNotValid)
+			switch database.Type {
+			case constant.AppPostgresql, constant.AppPostgres:
+				iPostgresqlRepo := repo.NewIPostgresqlRepo()
+				oldPostgresqlDb, _ := iPostgresqlRepo.Get(commonRepo.WithByName(dbConfig.DbName), iPostgresqlRepo.WithByFrom(constant.ResourceLocal))
+				resourceId = oldPostgresqlDb.ID
+				if oldPostgresqlDb.ID > 0 {
+					if oldPostgresqlDb.Username != dbConfig.DbUser || oldPostgresqlDb.Password != dbConfig.Password {
+						return buserr.New(constant.ErrDbUserNotValid)
+					}
+				} else {
+					var createPostgresql dto.PostgresqlDBCreate
+					createPostgresql.Name = dbConfig.DbName
+					createPostgresql.Username = dbConfig.DbUser
+					createPostgresql.Database = database.Name
+					createPostgresql.Format = "UTF8"
+					createPostgresql.Password = dbConfig.Password
+					createPostgresql.From = database.From
+					createPostgresql.SuperUser = true
+					pgdb, err := NewIPostgresqlService().Create(ctx, createPostgresql)
+					if err != nil {
+						return err
+					}
+					resourceId = pgdb.ID
 				}
-			} else {
-				var createMysql dto.MysqlDBCreate
-				createMysql.Name = dbConfig.DbName
-				createMysql.Username = dbConfig.DbUser
-				createMysql.Database = database.Name
-				createMysql.Format = "utf8mb4"
-				createMysql.Permission = "%"
-				createMysql.Password = dbConfig.Password
-				createMysql.From = database.From
-				mysqldb, err := NewIMysqlService().Create(ctx, createMysql)
-				if err != nil {
-					return err
+			case constant.AppMysql, constant.AppMariaDB:
+				iMysqlRepo := repo.NewIMysqlRepo()
+				oldMysqlDb, _ := iMysqlRepo.Get(commonRepo.WithByName(dbConfig.DbName), iMysqlRepo.WithByFrom(constant.ResourceLocal))
+				resourceId = oldMysqlDb.ID
+				if oldMysqlDb.ID > 0 {
+					if oldMysqlDb.Username != dbConfig.DbUser || oldMysqlDb.Password != dbConfig.Password {
+						return buserr.New(constant.ErrDbUserNotValid)
+					}
+				} else {
+					var createMysql dto.MysqlDBCreate
+					createMysql.Name = dbConfig.DbName
+					createMysql.Username = dbConfig.DbUser
+					createMysql.Database = database.Name
+					createMysql.Format = "utf8mb4"
+					createMysql.Permission = "%"
+					createMysql.Password = dbConfig.Password
+					createMysql.From = database.From
+					mysqldb, err := NewIMysqlService().Create(ctx, createMysql)
+					if err != nil {
+						return err
+					}
+					resourceId = mysqldb.ID
 				}
-				resourceId = mysqldb.ID
 			}
+
 		}
 		var installResource model.AppInstallResource
 		installResource.ResourceId = resourceId
@@ -326,8 +354,8 @@ func deleteAppInstall(install model.AppInstall, deleteBackup bool, forceDelete b
 					websiteApp, _ := appRepo.GetFirst(commonRepo.WithByID(websiteAppInstall.AppId))
 					if websiteApp.Type == constant.RuntimePHP {
 						go func() {
-							_, _ = compose.Down(install.GetComposePath())
-							_ = op.DeleteDir(install.GetPath())
+							_, _ = compose.Down(websiteAppInstall.GetComposePath())
+							_ = op.DeleteDir(websiteAppInstall.GetPath())
 						}()
 						_ = appInstallRepo.Delete(ctx, websiteAppInstall)
 					}
@@ -338,6 +366,8 @@ func deleteAppInstall(install model.AppInstall, deleteBackup bool, forceDelete b
 		_ = websiteDomainRepo.DeleteAll(ctx)
 	case constant.AppMysql, constant.AppMariaDB:
 		_ = mysqlRepo.Delete(ctx, mysqlRepo.WithByMysqlName(install.Name))
+	case constant.AppPostgresql:
+		_ = postgresqlRepo.Delete(ctx, postgresqlRepo.WithByPostgresqlName(install.Name))
 	}
 
 	_ = backupRepo.DeleteRecord(ctx, commonRepo.WithByType("app"), commonRepo.WithByName(install.App.Key), backupRepo.WithByDetailName(install.Name))
@@ -364,32 +394,51 @@ func deleteLink(ctx context.Context, install *model.AppInstall, deleteDB bool, f
 		return nil
 	}
 	for _, re := range resources {
-		mysqlService := NewIMysqlService()
-		if (re.Key == constant.AppMysql || re.Key == constant.AppMariaDB) && deleteDB {
-			database, _ := mysqlRepo.Get(commonRepo.WithByID(re.ResourceId))
-			if reflect.DeepEqual(database, model.DatabaseMysql{}) {
-				continue
-			}
-			if err := mysqlService.Delete(ctx, dto.MysqlDBDelete{
-				ID:           database.ID,
-				ForceDelete:  forceDelete,
-				DeleteBackup: deleteBackup,
-				Type:         re.Key,
-				Database:     database.MysqlName,
-			}); err != nil && !forceDelete {
-				return err
+		if deleteDB {
+			switch re.Key {
+			case constant.AppMysql, constant.AppMariaDB:
+				mysqlService := NewIMysqlService()
+				database, _ := mysqlRepo.Get(commonRepo.WithByID(re.ResourceId))
+				if reflect.DeepEqual(database, model.DatabaseMysql{}) {
+					continue
+				}
+				if err := mysqlService.Delete(ctx, dto.MysqlDBDelete{
+					ID:           database.ID,
+					ForceDelete:  forceDelete,
+					DeleteBackup: deleteBackup,
+					Type:         re.Key,
+					Database:     database.MysqlName,
+				}); err != nil && !forceDelete {
+					return err
+				}
+			case constant.AppPostgresql:
+				pgsqlService := NewIPostgresqlService()
+				database, _ := postgresqlRepo.Get(commonRepo.WithByID(re.ResourceId))
+				if reflect.DeepEqual(database, model.DatabasePostgresql{}) {
+					continue
+				}
+				if err := pgsqlService.Delete(ctx, dto.PostgresqlDBDelete{
+					ID:           database.ID,
+					ForceDelete:  forceDelete,
+					DeleteBackup: deleteBackup,
+					Type:         re.Key,
+					Database:     database.PostgresqlName,
+				}); err != nil {
+					return err
+				}
 			}
 		}
+
 	}
 	return appInstallResourceRepo.DeleteBy(ctx, appInstallResourceRepo.WithAppInstallId(install.ID))
 }
 
-func upgradeInstall(installId uint, detailId uint, backup bool) error {
-	install, err := appInstallRepo.GetFirst(commonRepo.WithByID(installId))
+func upgradeInstall(installID uint, detailID uint, backup, pullImage bool) error {
+	install, err := appInstallRepo.GetFirst(commonRepo.WithByID(installID))
 	if err != nil {
 		return err
 	}
-	detail, err := appDetailRepo.GetFirst(commonRepo.WithByID(detailId))
+	detail, err := appDetailRepo.GetFirst(commonRepo.WithByID(detailID))
 	if err != nil {
 		return err
 	}
@@ -441,23 +490,6 @@ func upgradeInstall(installId uint, detailId uint, backup bool) error {
 
 		if install.App.Resource == constant.AppResourceLocal {
 			detailDir = path.Join(constant.ResourceDir, "apps", "local", strings.TrimPrefix(install.App.Key, "local"), detail.Version)
-		}
-
-		images, err := composeV2.GetDockerComposeImages([]byte(detail.DockerCompose))
-		if err != nil {
-			upErr = err
-			return
-		}
-		dockerCli, err := composeV2.NewClient()
-		if err != nil {
-			upErr = err
-			return
-		}
-		for _, image := range images {
-			if err = dockerCli.PullImage(image, true); err != nil {
-				upErr = buserr.WithNameAndErr("ErrDockerPullImage", "", err)
-				return
-			}
 		}
 
 		command := exec.Command("/bin/bash", "-c", fmt.Sprintf("cp -rn %s/* %s || true", detailDir, install.GetPath()))
@@ -524,7 +556,7 @@ func upgradeInstall(installId uint, detailId uint, backup bool) error {
 
 		install.DockerCompose = string(composeByte)
 		install.Version = detail.Version
-		install.AppDetailId = detailId
+		install.AppDetailId = detailID
 
 		if out, err := compose.Down(install.GetComposePath()); err != nil {
 			if out != "" {
@@ -541,6 +573,31 @@ func upgradeInstall(installId uint, detailId uint, backup bool) error {
 
 		if err = runScript(&install, "upgrade"); err != nil {
 			return
+		}
+
+		content, err := fileOp.GetContent(install.GetEnvPath())
+		if err != nil {
+			upErr = err
+			return
+		}
+
+		if pullImage {
+			images, err := composeV2.GetDockerComposeImages(install.Name, content, []byte(detail.DockerCompose))
+			if err != nil {
+				upErr = err
+				return
+			}
+			dockerCli, err := composeV2.NewClient()
+			if err != nil {
+				upErr = err
+				return
+			}
+			for _, image := range images {
+				if err = dockerCli.PullImage(image, true); err != nil {
+					upErr = buserr.WithNameAndErr("ErrDockerPullImage", "", err)
+					return
+				}
+			}
 		}
 
 		if upErr = fileOp.WriteFile(install.GetComposePath(), strings.NewReader(install.DockerCompose), 0775); upErr != nil {
@@ -630,6 +687,12 @@ func handleMap(params map[string]interface{}, envParams map[string]string) {
 			envParams[k] = strconv.Itoa(int(t))
 		case int:
 			envParams[k] = strconv.Itoa(t)
+		case []interface{}:
+			strArray := make([]string, len(t))
+			for i := range t {
+				strArray[i] = strings.ToLower(fmt.Sprintf("%v", t[i]))
+			}
+			envParams[k] = strings.Join(strArray, ",")
 		default:
 			envParams[k] = t.(string)
 		}
@@ -784,39 +847,36 @@ func checkContainerNameIsExist(containerName, appDir string) (bool, error) {
 	return false, nil
 }
 
-func upApp(appInstall *model.AppInstall) {
+func upApp(appInstall *model.AppInstall, pullImages bool) {
 	upProject := func(appInstall *model.AppInstall) (err error) {
-		if err == nil {
-			var (
-				out    string
-				errMsg string
-			)
-			if appInstall.App.Type != "php" {
-				out, err = compose.Pull(appInstall.GetComposePath())
-				if err != nil {
-					if out != "" {
-						if strings.Contains(out, "no such host") {
-							errMsg = i18n.GetMsgByKey("ErrNoSuchHost") + ":"
-						}
-						if strings.Contains(out, "timeout") {
-							errMsg = i18n.GetMsgByKey("ErrImagePullTimeOut") + ":"
-						}
-						appInstall.Message = errMsg + out
-					}
-					return err
-				}
-			}
-			out, err = compose.Up(appInstall.GetComposePath())
+		var (
+			out    string
+			errMsg string
+		)
+		if pullImages && appInstall.App.Type != "php" {
+			out, err = compose.Pull(appInstall.GetComposePath())
 			if err != nil {
 				if out != "" {
+					if strings.Contains(out, "no such host") {
+						errMsg = i18n.GetMsgByKey("ErrNoSuchHost") + ":"
+					}
+					if strings.Contains(out, "timeout") {
+						errMsg = i18n.GetMsgByKey("ErrImagePullTimeOut") + ":"
+					}
 					appInstall.Message = errMsg + out
 				}
 				return err
 			}
-			return
-		} else {
-			return
 		}
+
+		out, err = compose.Up(appInstall.GetComposePath())
+		if err != nil {
+			if out != "" {
+				appInstall.Message = errMsg + out
+			}
+			return err
+		}
+		return
 	}
 	if err := upProject(appInstall); err != nil {
 		appInstall.Status = constant.Error
@@ -839,11 +899,12 @@ func rebuildApp(appInstall model.AppInstall) error {
 			_ = handleErr(appInstall, err, out)
 			return
 		}
-		out, err = compose.Up(dockerComposePath)
+		out, err = compose.Up(appInstall.GetComposePath())
 		if err != nil {
 			_ = handleErr(appInstall, err, out)
 			return
 		}
+
 		appInstall.Status = constant.Running
 		_ = appInstallRepo.Save(context.Background(), &appInstall)
 	}()
@@ -931,6 +992,43 @@ func handleLocalAppDetail(versionDir string, appDetail *model.AppDetail) error {
 	if err != nil {
 		return buserr.WithMap(constant.ErrFileParseApp, map[string]interface{}{"name": "data.yml", "err": err.Error()}, err)
 	}
+	var appParam dto.AppForm
+	if err = json.Unmarshal(dataJson, &appParam); err != nil {
+		return buserr.WithMap(constant.ErrFileParseApp, map[string]interface{}{"name": "data.yml", "err": err.Error()}, err)
+	}
+	for _, formField := range appParam.FormFields {
+		if strings.Contains(formField.EnvKey, " ") {
+			return buserr.WithName(constant.ErrAppParamKey, formField.EnvKey)
+		}
+	}
+
+	var dataMap map[string]interface{}
+	err = yaml.Unmarshal(paramByte, &dataMap)
+	if err != nil {
+		return buserr.WithMap(constant.ErrFileParseApp, map[string]interface{}{"name": "data.yml", "err": err.Error()}, err)
+	}
+
+	additionalProperties, ok := dataMap["additionalProperties"].(map[string]interface{})
+	if !ok {
+		return buserr.WithName(constant.ErrAppParamKey, "additionalProperties")
+	}
+
+	formFieldsInterface, ok := additionalProperties["formFields"]
+	if ok {
+		formFields, ok := formFieldsInterface.([]interface{})
+		if !ok {
+			return buserr.WithName(constant.ErrAppParamKey, "formFields")
+		}
+		for _, item := range formFields {
+			field := item.(map[string]interface{})
+			for key, value := range field {
+				if value == nil {
+					return buserr.WithName(constant.ErrAppParamKey, key)
+				}
+			}
+		}
+	}
+
 	appDetail.Params = string(dataJson)
 	return nil
 }
@@ -982,8 +1080,8 @@ func handleErr(install model.AppInstall, err error, out string) error {
 	if out != "" {
 		install.Message = out
 		reErr = errors.New(out)
-		install.Status = constant.Error
 	}
+	install.Status = constant.Error
 	_ = appInstallRepo.Save(context.Background(), &install)
 	return reErr
 }
@@ -994,6 +1092,10 @@ func handleInstalled(appInstallList []model.AppInstall, updated bool) ([]respons
 		if updated && (installed.App.Type == "php" || installed.Status == constant.Installing || (installed.App.Key == constant.AppMysql && installed.Version == "5.6.51")) {
 			continue
 		}
+		if err := syncAppInstallStatus(&installed); err != nil {
+			global.LOG.Error("sync app install status error : ", err)
+		}
+
 		installDTO := response.AppInstalledDTO{
 			AppInstall: installed,
 			Path:       installed.GetPath(),
@@ -1008,7 +1110,7 @@ func handleInstalled(appInstallList []model.AppInstall, updated bool) ([]respons
 		}
 		var versions []string
 		for _, detail := range details {
-			if detail.IgnoreUpgrade {
+			if detail.IgnoreUpgrade || installed.Version == "latest" {
 				continue
 			}
 			if common.IsCrossVersion(installed.Version, detail.Version) && !app.CrossVersionUpdate {

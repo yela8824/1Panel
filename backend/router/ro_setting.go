@@ -8,7 +8,7 @@ import (
 
 type SettingRouter struct{}
 
-func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
+func (s *SettingRouter) InitRouter(Router *gin.RouterGroup) {
 	router := Router.Group("settings").
 		Use(middleware.JwtAuth()).
 		Use(middleware.SessionAuth())
@@ -45,6 +45,7 @@ func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
 		settingRouter.GET("/backup/search", baseApi.ListBackup)
 		settingRouter.GET("/backup/onedrive", baseApi.LoadOneDriveInfo)
 		settingRouter.POST("/backup/backup", baseApi.Backup)
+		settingRouter.POST("/backup/refresh/onedrive", baseApi.RefreshOneDriveToken)
 		settingRouter.POST("/backup/recover", baseApi.Recover)
 		settingRouter.POST("/backup/recover/byupload", baseApi.RecoverByUpload)
 		settingRouter.POST("/backup/search/files", baseApi.LoadFilesFromBackup)
@@ -53,6 +54,7 @@ func (s *SettingRouter) InitSettingRouter(Router *gin.RouterGroup) {
 		settingRouter.POST("/backup/del", baseApi.DeleteBackup)
 		settingRouter.POST("/backup/update", baseApi.UpdateBackup)
 		settingRouter.POST("/backup/record/search", baseApi.SearchBackupRecords)
+		settingRouter.POST("/backup/record/search/bycronjob", baseApi.SearchBackupRecordsByCronjob)
 		settingRouter.POST("/backup/record/download", baseApi.DownloadRecord)
 		settingRouter.POST("/backup/record/del", baseApi.DeleteBackupRecord)
 

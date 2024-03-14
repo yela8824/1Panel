@@ -6,6 +6,21 @@
             <span>{{ $t('container.startIn') }}</span>
         </el-card>
         <LayoutContent :title="$t('container.container')" :class="{ mask: dockerStatus != 'Running' }">
+            <template #rightButton>
+                <div class="flex justify-end">
+                    <div class="mr-10">
+                        <el-checkbox v-model="includeAppStore" @change="search()">
+                            {{ $t('container.includeAppstore') }}
+                        </el-checkbox>
+                    </div>
+                    <fu-table-column-select
+                        :columns="columns"
+                        trigger="hover"
+                        :title="$t('commons.table.selectColumn')"
+                        popper-class="popper-class"
+                    />
+                </div>
+            </template>
             <template #toolbar>
                 <el-row>
                     <el-col :xs="24" :sm="16" :md="16" :lg="16" :xl="16">
@@ -41,22 +56,12 @@
                     </el-col>
                     <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
                         <TableSetting title="container-refresh" @search="refresh()" />
-                        <div class="search-button">
-                            <el-input
-                                clearable
-                                v-model="searchName"
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
+                        <TableSearch @search="search()" v-model:searchName="searchName" />
                     </el-col>
                 </el-row>
             </template>
             <template #search>
-                <el-select v-model="searchState" @change="search()" clearable>
+                <el-select v-model="searchState" @change="search()" clearable class="p-w-200">
                     <template #prefix>{{ $t('commons.table.status') }}</template>
                     <el-option :label="$t('commons.table.all')" value="all"></el-option>
                     <el-option :label="$t('commons.status.created')" value="created"></el-option>
@@ -76,15 +81,19 @@
                     @sort-change="search"
                     @search="search"
                     :row-style="{ height: '65px' }"
+                    style="width: 100%"
+                    :columns="columns"
+                    localKey="containerColumn"
                 >
-                    <el-table-column type="selection" fix />
+                    <el-table-column type="selection" />
                     <el-table-column
                         :label="$t('commons.table.name')"
-                        :width="mobile ? 300 : 'auto'"
-                        min-width="80"
+                        :width="mobile ? 300 : 200"
+                        min-width="100"
                         prop="name"
                         sortable
                         fix
+                        :fixed="mobile ? false : 'left'"
                     >
                         <template #default="{ row }">
                             <Tooltip @click="onInspect(row.containerID)" :text="row.name" />
@@ -93,15 +102,15 @@
                     <el-table-column
                         :label="$t('container.image')"
                         show-overflow-tooltip
-                        min-width="80"
+                        min-width="150"
                         prop="imageName"
                     />
-                    <el-table-column :label="$t('commons.table.status')" min-width="70" prop="state" sortable fix>
+                    <el-table-column :label="$t('commons.table.status')" min-width="100" prop="state" sortable>
                         <template #default="{ row }">
                             <Status :key="row.state" :status="row.state"></Status>
                         </template>
                     </el-table-column>
-                    <el-table-column :label="$t('container.source')" show-overflow-tooltip min-width="80" fix>
+                    <el-table-column :label="$t('container.source')" show-overflow-tooltip min-width="100">
                         <template #default="{ row }">
                             <div v-if="row.hasLoad">
                                 <div class="source-font">CPU: {{ row.cpuPercent.toFixed(2) }}%</div>
@@ -174,19 +183,63 @@
                             </div>
                         </template>
                     </el-table-column>
-                    <el-table-column :label="$t('container.ip')" :width="mobile ? 80 : 'auto'" min-width="70" fix>
+                    <el-table-column
+                        :label="$t('container.ip')"
+                        :width="mobile ? 80 : 'auto'"
+                        min-width="100"
+                        prop="network"
+                    >
                         <template #default="{ row }">
                             <div v-if="row.network">
                                 <div v-for="(item, index) in row.network" :key="index">{{ item }}</div>
                             </div>
                         </template>
                     </el-table-column>
+                    <el-table-column :label="$t('container.related')" min-width="200" prop="appName">
+                        <template #default="{ row }">
+                            <div>
+                                <el-tooltip
+                                    v-if="row.appName != ''"
+                                    :hide-after="20"
+                                    :content="$t('app.app') + ': ' + row.appName + '[' + row.appInstallName + ']'"
+                                    placement="top"
+                                >
+                                    <el-button
+                                        icon="Position"
+                                        plain
+                                        size="small"
+                                        @click="router.push({ name: 'AppInstalled' })"
+                                    >
+                                        {{ $t('app.app') }}: {{ row.appName }} [{{ row.appInstallName }}]
+                                    </el-button>
+                                </el-tooltip>
+                            </div>
+                            <div>
+                                <el-tooltip
+                                    v-if="row.websites != null"
+                                    :hide-after="20"
+                                    :content="row.websites.join(',')"
+                                    placement="top"
+                                    class="mt-1"
+                                >
+                                    <el-button
+                                        icon="Position"
+                                        plain
+                                        size="small"
+                                        @click="router.push({ name: 'Website' })"
+                                    >
+                                        {{ $t('website.website') }}:
+                                        {{ row.websites.join(',') }}
+                                    </el-button>
+                                </el-tooltip>
+                            </div>
+                        </template>
+                    </el-table-column>
                     <el-table-column
                         :label="$t('commons.table.port')"
                         :width="mobile ? 260 : 'auto'"
-                        min-width="130"
+                        min-width="200"
                         prop="ports"
-                        fix
                     >
                         <template #default="{ row }">
                             <div v-if="row.ports">
@@ -198,13 +251,12 @@
                                                 @click="goDashboard(item)"
                                                 class="tagMargin"
                                                 icon="Position"
-                                                type="primary"
                                                 plain
                                                 size="small"
                                             >
                                                 {{ item.length > 25 ? item.substring(0, 25) + '...' : item }}
                                             </el-button>
-                                            <el-button v-else class="tagMargin" type="primary" plain size="small">
+                                            <el-button v-else class="tagMargin" plain size="small">
                                                 {{ item }}
                                             </el-button>
                                         </el-tooltip>
@@ -225,17 +277,18 @@
                     </el-table-column>
                     <el-table-column
                         :label="$t('container.upTime')"
-                        min-width="80"
+                        min-width="200"
                         show-overflow-tooltip
                         prop="runTime"
-                        fix
                     />
                     <fu-table-operations
+                        fix
                         width="180px"
                         :ellipsis="2"
                         :buttons="buttons"
                         :label="$t('commons.table.operate')"
-                        fix
+                        :fixed="mobile ? false : 'right'"
+                        prop="operate"
                     />
                 </ComplexTable>
             </template>
@@ -258,9 +311,6 @@
 </template>
 
 <script lang="ts" setup>
-import OpDialog from '@/components/del-dialog/index.vue';
-import Tooltip from '@/components/tooltip/index.vue';
-import TableSetting from '@/components/table-setting/index.vue';
 import PruneDialog from '@/views/container/container/prune/index.vue';
 import RenameDialog from '@/views/container/container/rename/index.vue';
 import OperateDialog from '@/views/container/container/operate/index.vue';
@@ -307,6 +357,8 @@ const searchState = ref('all');
 const dialogUpgradeRef = ref();
 const dialogPortJumpRef = ref();
 const opRef = ref();
+const includeAppStore = ref(true);
+const columns = ref([]);
 
 const dockerStatus = ref('Running');
 const loadStatus = async () => {
@@ -370,6 +422,7 @@ const search = async (column?: any) => {
         filters: filterItem,
         orderBy: paginationConfig.orderBy,
         order: paginationConfig.order,
+        excludeAppStore: !includeAppStore.value,
     };
     loading.value = true;
     loadStats();

@@ -57,7 +57,7 @@
                     <template #default="{ row }">
                         <el-checkbox
                             v-model="rowName"
-                            :true-label="row.name"
+                            :true-value="row.name"
                             :disabled="disabledDir(row)"
                             @change="checkFile(row)"
                         />
@@ -116,6 +116,10 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    isAll: {
+        type: Boolean,
+        default: false,
+    },
     disabled: {
         type: Boolean,
         default: false,
@@ -142,6 +146,9 @@ const closePage = () => {
 };
 
 const disabledDir = (row: File.File) => {
+    if (props.isAll) {
+        return false;
+    }
     if (!props.dir) {
         return row.isDir;
     }

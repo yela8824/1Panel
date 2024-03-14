@@ -422,11 +422,9 @@ func (b *BaseApi) MoveFile(c *gin.Context) {
 // @Summary Download file
 // @Description 下载文件
 // @Accept json
-// @Param request body request.FileDownload true "request"
 // @Success 200
 // @Security ApiKeyAuth
-// @Router /files/download [post]
-// @x-panel-log {"bodyKeys":["name"],"paramKeys":[],"BeforeFunctions":[],"formatZH":"下载文件 [name]","formatEN":"Download file [name]"}
+// @Router /files/download [get]
 func (b *BaseApi) Download(c *gin.Context) {
 	filePath := c.Query("path")
 	file, err := os.Open(filePath)
@@ -689,7 +687,7 @@ func (b *BaseApi) Keys(c *gin.Context) {
 // @Param request body request.FileReadByLineReq true "request"
 // @Success 200
 // @Security ApiKeyAuth
-// @Router /files/log/read [post]
+// @Router /files/read [post]
 func (b *BaseApi) ReadFileByLine(c *gin.Context) {
 	var req request.FileReadByLineReq
 	if err := helper.CheckBindAndValidate(&req, c); err != nil {

@@ -59,6 +59,8 @@ ErrVersionTooLow: '当前 1Panel 版本过低，无法更新应用商店，请�
 ErrAppNameExist: '应用名称已存在'
 AppStoreIsSyncing: '应用商店正在同步中，请稍后再试'
 ErrGetCompose: "docker-compose.yml 文件获取失败！{{ .detail }}"
+ErrAppWarn: "状态异常，请查看日志"
+ErrAppParamKey: "参数 {{ .name }} 字段异常"
 
 #file
 ErrFileCanNotRead: "此文件不支持预览"
@@ -125,6 +127,7 @@ ErrTypeOfRedis: "恢复文件类型与当前持久化方式不符，请修改后
 ErrInUsed: "{{ .detail }} 正被使用，无法删除"
 ErrObjectInUsed: "该对象正被使用，无法删除"
 ErrPortRules: "端口数目不匹配，请重新输入！"
+ErrPgImagePull: "镜像拉取超时，请配置镜像加速或手动拉取 postgres:16.0-alpine 镜像后重试"
 
 #runtime
 ErrDirNotFound: "build 文件夹不存在！请检查文件完整性！"
@@ -157,7 +160,15 @@ ErrFirewall: "当前未检测到系统 firewalld 或 ufw 服务，请检查后�
 
 #cronjob
 ErrBashExecute: "脚本执行错误，请在任务输出文本域中查看具体信息。"
+ErrCutWebsiteLog: "{{ .name }} 网站日志切割失败，错误 {{ .err }}"
+CutWebsiteLogSuccess: "{{ .name }} 网站日志切割成功，备份路径 {{ .path }}"
 
 #toolbox
 ErrNotExistUser: "当前用户不存在，请修改后重试！"
 ErrBanAction: "设置失败，当前 {{ .name }} 服务不可用，请检查后重试！"
+
+#waf
+ErrScope: "不支持修改此配置"
+ErrStateChange: "状态修改失败"
+ErrRuleExist: "规则名称已存在"
+ErrRuleNotExist: "规则不存在"

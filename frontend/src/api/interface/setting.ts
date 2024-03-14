@@ -45,6 +45,7 @@ export namespace Setting {
         emailVars: string;
         weChatVars: string;
         dingVars: string;
+        snapshotIgnore: string;
     }
     export interface SettingUpdate {
         key: string;
@@ -90,6 +91,8 @@ export namespace Setting {
     export interface SnapshotCreate {
         id: number;
         from: string;
+        fromAccounts: Array<string>;
+        defaultDownload: string;
         description: string;
     }
     export interface SnapshotImport {
@@ -106,6 +109,7 @@ export namespace Setting {
         id: number;
         name: string;
         from: string;
+        defaultDownload: string;
         description: string;
         status: string;
         message: string;

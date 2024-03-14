@@ -1,6 +1,6 @@
 <template>
     <el-drawer
-        v-model="drawerVisiable"
+        v-model="drawerVisible"
         :destroy-on-close="true"
         @close="handleClose"
         :close-on-click-modal="false"
@@ -17,8 +17,8 @@
                     </el-form-item>
                     <el-form-item label="Dockerfile" prop="from">
                         <el-radio-group v-model="form.from">
-                            <el-radio label="edit">{{ $t('commons.button.edit') }}</el-radio>
-                            <el-radio label="path">{{ $t('container.pathSelect') }}</el-radio>
+                            <el-radio value="edit">{{ $t('commons.button.edit') }}</el-radio>
+                            <el-radio value="path">{{ $t('container.pathSelect') }}</el-radio>
                         </el-radio-group>
                     </el-form-item>
                     <el-form-item v-if="form.from === 'edit'" :rules="Rules.requiredInput">
@@ -48,7 +48,7 @@
                         <el-input
                             :placeholder="$t('container.tagHelper')"
                             type="textarea"
-                            :autosize="{ minRows: 2, maxRows: 4 }"
+                            :rows="3"
                             v-model="form.tagStr"
                         />
                     </el-form-item>
@@ -58,7 +58,7 @@
                     ref="logRef"
                     :config="logConfig"
                     :default-button="false"
-                    v-if="logVisiable"
+                    v-if="logVisible"
                     :style="'height: calc(100vh - 370px);min-height: 200px'"
                 />
             </el-col>
@@ -66,7 +66,7 @@
 
         <template #footer>
             <span class="dialog-footer">
-                <el-button @click="drawerVisiable = false">{{ $t('commons.button.cancel') }}</el-button>
+                <el-button @click="drawerVisible = false">{{ $t('commons.button.cancel') }}</el-button>
                 <el-button :disabled="buttonDisabled" type="primary" @click="onSubmit(formRef)">
                     {{ $t('commons.button.confirm') }}
                 </el-button>
@@ -87,10 +87,10 @@ import { ElForm, ElMessage } from 'element-plus';
 import { imageBuild } from '@/api/modules/container';
 import DrawerHeader from '@/components/drawer-header/index.vue';
 
-const logVisiable = ref<boolean>(false);
+const logVisible = ref<boolean>(false);
 const extensions = [javascript(), oneDark];
 const buttonDisabled = ref(false);
-const drawerVisiable = ref(false);
+const drawerVisible = ref(false);
 const logRef = ref();
 
 const logConfig = reactive({
@@ -111,8 +111,8 @@ const rules = reactive({
     dockerfile: [Rules.requiredInput],
 });
 const acceptParams = async () => {
-    logVisiable.value = false;
-    drawerVisiable.value = true;
+    logVisible.value = false;
+    drawerVisible.value = true;
     form.from = 'path';
     form.dockerfile = '';
     form.tagStr = '';
@@ -122,7 +122,7 @@ const acceptParams = async () => {
 const emit = defineEmits<{ (e: 'search'): void }>();
 
 const handleClose = () => {
-    drawerVisiable.value = false;
+    drawerVisible.value = false;
     emit('search');
 };
 
@@ -145,9 +145,9 @@ const onSubmit = async (formEl: FormInstance | undefined) => {
 };
 
 const loadLogs = () => {
-    logVisiable.value = false;
+    logVisible.value = false;
     nextTick(() => {
-        logVisiable.value = true;
+        logVisible.value = true;
         nextTick(() => {
             logRef.value.changeTail(true);
         });

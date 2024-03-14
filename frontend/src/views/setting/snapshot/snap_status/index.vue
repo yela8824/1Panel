@@ -44,19 +44,19 @@
                     </div>
                 </template>
             </el-alert>
-            <el-alert :type="loadStatus(status.panelData)" :closable="false">
-                <template #title>
-                    <el-button :icon="loadIcon(status.panelData)" link>{{ $t('setting.panelData') }}</el-button>
-                    <div v-if="showErrorMsg(status.panelData)" class="top-margin">
-                        <span class="err-message">{{ status.panelData }}</span>
-                    </div>
-                </template>
-            </el-alert>
             <el-alert :type="loadStatus(status.backupData)" :closable="false">
                 <template #title>
                     <el-button :icon="loadIcon(status.backupData)" link>{{ $t('setting.backupData') }}</el-button>
                     <div v-if="showErrorMsg(status.backupData)" class="top-margin">
                         <span class="err-message">{{ status.backupData }}</span>
+                    </div>
+                </template>
+            </el-alert>
+            <el-alert :type="loadStatus(status.panelData)" :closable="false">
+                <template #title>
+                    <el-button :icon="loadIcon(status.panelData)" link>{{ $t('setting.panelData') }}</el-button>
+                    <div v-if="showErrorMsg(status.panelData)" class="top-margin">
+                        <span class="err-message">{{ status.panelData }}</span>
                     </div>
                 </template>
             </el-alert>
@@ -117,6 +117,7 @@ const dialogVisible = ref(false);
 const loading = ref();
 const snapID = ref();
 const snapFrom = ref();
+const snapDefaultDownload = ref();
 const snapDescription = ref();
 
 let timer: NodeJS.Timer | null = null;
@@ -124,6 +125,7 @@ let timer: NodeJS.Timer | null = null;
 interface DialogProps {
     id: number;
     from: string;
+    defaultDownload: string;
     description: string;
 }
 
@@ -131,6 +133,7 @@ const acceptParams = (props: DialogProps): void => {
     dialogVisible.value = true;
     snapID.value = props.id;
     snapFrom.value = props.from;
+    snapDefaultDownload.value = props.defaultDownload;
     snapDescription.value = props.description;
     onWatch();
     nextTick(() => {
@@ -167,7 +170,13 @@ const onClose = async () => {
 
 const onRetry = async () => {
     loading.value = true;
-    await snapshotCreate({ id: snapID.value, from: snapFrom.value, description: snapDescription.value })
+    await snapshotCreate({
+        id: snapID.value,
+        fromAccounts: [],
+        from: snapFrom.value,
+        defaultDownload: snapDefaultDownload.value,
+        description: snapDescription.value,
+    })
         .then(() => {
             loading.value = false;
             loadCurrentStatus();

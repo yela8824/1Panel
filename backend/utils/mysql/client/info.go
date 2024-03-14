@@ -4,9 +4,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"strings"
 
-	"github.com/1Panel-dev/1Panel/backend/utils/common"
+	"github.com/1Panel-dev/1Panel/backend/global"
 	"github.com/go-sql-driver/mysql"
 )
 
@@ -71,6 +70,8 @@ type AccessChangeInfo struct {
 
 type BackupInfo struct {
 	Name      string `json:"name"`
+	Type      string `json:"type"`
+	Version   string `json:"version"`
 	Format    string `json:"format"`
 	TargetDir string `json:"targetDir"`
 	FileName  string `json:"fileName"`
@@ -80,6 +81,8 @@ type BackupInfo struct {
 
 type RecoverInfo struct {
 	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Version    string `json:"version"`
 	Format     string `json:"format"`
 	SourceFile string `json:"sourceFile"`
 
@@ -103,67 +106,30 @@ var formatMap = map[string]string{
 	"big5":    "big5_chinese_ci",
 }
 
-func loadNameByDB(name, version string) string {
-	nameItem := common.ConvertToPinyin(name)
-	if strings.HasPrefix(version, "5.6") {
-		if len(nameItem) <= 16 {
-			return nameItem
-		}
-		return strings.TrimSuffix(nameItem[:10], "_") + "_" + common.RandStr(5)
-	}
-	if len(nameItem) <= 32 {
-		return nameItem
-	}
-	return strings.TrimSuffix(nameItem[:25], "_") + "_" + common.RandStr(5)
-}
-
-func randomPassword(user string) string {
-	passwdItem := user
-	if len(user) > 6 {
-		passwdItem = user[:6]
-	}
-	return passwdItem + "@" + common.RandStrAndNum(8)
-}
-
-func VerifyPeerCertFunc(pool *x509.CertPool) func([][]byte, [][]*x509.Certificate) error {
-	return func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
-		if len(rawCerts) == 0 {
-			return errors.New("no certificates available to verify")
-		}
-
-		cert, err := x509.ParseCertificate(rawCerts[0])
-		if err != nil {
-			return err
-		}
-
-		opts := x509.VerifyOptions{Roots: pool}
-		if _, err = cert.Verify(opts); err != nil {
-			return err
-		}
-		return nil
-	}
-}
-
 func ConnWithSSL(ssl, skipVerify bool, clientKey, clientCert, rootCert string) (string, error) {
 	if !ssl {
 		return "", nil
 	}
-	pool := x509.NewCertPool()
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: skipVerify,
+	}
 	if len(rootCert) != 0 {
+		pool := x509.NewCertPool()
 		if ok := pool.AppendCertsFromPEM([]byte(rootCert)); !ok {
+			global.LOG.Error("append certs from pem failed")
 			return "", errors.New("unable to append root cert to pool")
 		}
+		tlsConfig.RootCAs = pool
 	}
-	cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientKey))
-	if err != nil {
-		return "", err
+	if len(clientCert) != 0 && len(clientKey) != 0 {
+		cert, err := tls.X509KeyPair([]byte(clientCert), []byte(clientKey))
+		if err != nil {
+			return "", err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
-	if err := mysql.RegisterTLSConfig("cloudsql", &tls.Config{
-		RootCAs:               pool,
-		Certificates:          []tls.Certificate{cert},
-		InsecureSkipVerify:    skipVerify,
-		VerifyPeerCertificate: VerifyPeerCertFunc(pool),
-	}); err != nil {
+	if err := mysql.RegisterTLSConfig("cloudsql", tlsConfig); err != nil {
+		global.LOG.Errorf("register tls config failed, err: %v", err)
 		return "", err
 	}
 	return "&tls=cloudsql", nil

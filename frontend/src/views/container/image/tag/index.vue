@@ -15,7 +15,7 @@
                         :rules="Rules.requiredSelect"
                         prop="repo"
                     >
-                        <el-select style="width: 100%" filterable v-model="form.repo" @change="changeRepo">
+                        <el-select style="width: 100%" clearable filterable v-model="form.repo" @change="changeRepo">
                             <el-option v-for="item in repos" :key="item.id" :value="item.name" :label="item.name" />
                         </el-select>
                     </el-form-item>
@@ -43,10 +43,10 @@
 
         <template #footer>
             <span class="dialog-footer">
-                <el-button :disabeld="loading" @click="drawerVisible = false">
+                <el-button :disabled="loading" @click="drawerVisible = false">
                     {{ $t('commons.button.cancel') }}
                 </el-button>
-                <el-button :disabeld="loading" type="primary" @click="onSubmit(formRef)">
+                <el-button :disabled="loading" type="primary" @click="onSubmit(formRef)">
                     {{ $t('commons.button.save') }}
                 </el-button>
             </span>

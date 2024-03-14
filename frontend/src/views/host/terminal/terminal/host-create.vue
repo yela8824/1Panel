@@ -17,17 +17,15 @@
                         />
                         <el-form-item :label="$t('terminal.ip')" prop="addr">
                             <el-input @change="isOK = false" v-if="!isLocal" clearable v-model.trim="hostInfo.addr" />
-                            <div style="margin-left: 12px">
-                                <span v-if="isLocal">{{ hostInfo.addr }}</span>
-                            </div>
+                            <el-tag v-if="isLocal">{{ hostInfo.addr }}</el-tag>
                         </el-form-item>
                         <el-form-item :label="$t('commons.login.username')" prop="user">
                             <el-input @change="isOK = false" clearable v-model="hostInfo.user" />
                         </el-form-item>
                         <el-form-item :label="$t('terminal.authMode')" prop="authMode">
                             <el-radio-group @change="isOK = false" v-model="hostInfo.authMode">
-                                <el-radio label="password">{{ $t('terminal.passwordMode') }}</el-radio>
-                                <el-radio label="key">{{ $t('terminal.keyMode') }}</el-radio>
+                                <el-radio value="password">{{ $t('terminal.passwordMode') }}</el-radio>
+                                <el-radio value="key">{{ $t('terminal.keyMode') }}</el-radio>
                             </el-radio-group>
                         </el-form-item>
                         <el-form-item

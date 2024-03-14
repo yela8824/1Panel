@@ -18,7 +18,7 @@
                             <el-input
                                 type="textarea"
                                 :placeholder="$t('container.registrieHelper')"
-                                :autosize="{ minRows: 8, maxRows: 10 }"
+                                :rows="5"
                                 v-model="form.registries"
                             />
                         </el-form-item>
@@ -70,6 +70,9 @@ function checkRegistries(rule: any, value: any, callback: any) {
         const reg = /^[a-zA-Z0-9]{1}[a-z:A-Z0-9_/.-]{0,150}$/;
         let regis = form.registries.split('\n');
         for (const item of regis) {
+            if (item === '') {
+                continue;
+            }
             if (!reg.test(item)) {
                 return callback(new Error(i18n.global.t('commons.rule.imageName')));
             }

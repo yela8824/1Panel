@@ -8,24 +8,24 @@
         @opened="onOpen"
         :top="'5vh'"
     >
-        <el-form :inline="true" :model="config">
+        <el-form :inline="true" :model="config" class="mt-1.5">
             <el-form-item :label="$t('file.theme')">
-                <el-select v-model="config.theme" @change="changeTheme()">
+                <el-select v-model="config.theme" @change="changeTheme()" class="p-w-200">
                     <el-option v-for="item in themes" :key="item.label" :value="item.value" :label="item.label" />
                 </el-select>
             </el-form-item>
             <el-form-item :label="$t('file.language')">
-                <el-select v-model="config.language" @change="changeLanguage()">
+                <el-select v-model="config.language" @change="changeLanguage()" class="p-w-200">
                     <el-option v-for="lang in Languages" :key="lang.label" :value="lang.label" :label="lang.label" />
                 </el-select>
             </el-form-item>
             <el-form-item :label="$t('file.eol')">
-                <el-select v-model="config.eol" @change="changeEOL()">
+                <el-select v-model="config.eol" @change="changeEOL()" class="p-w-200">
                     <el-option v-for="eol in eols" :key="eol.label" :value="eol.value" :label="eol.label" />
                 </el-select>
             </el-form-item>
             <el-form-item :label="$t('file.wordWrap')">
-                <el-select v-model="config.wordWrap" @change="changeWarp()">
+                <el-select v-model="config.wordWrap" @change="changeWarp()" class="p-w-200">
                     <el-option :label="$t('commons.button.enable')" value="on"></el-option>
                     <el-option :label="$t('commons.button.disable')" value="off"></el-option>
                 </el-select>
@@ -197,7 +197,7 @@ const quickSave = () => {
 
 const saveContent = (closePage: boolean) => {
     loading.value = true;
-    SaveFileContent(form.value).finally(() => {
+    SaveFileContent(form.value).then(() => {
         loading.value = false;
         open.value = !closePage;
         MsgSuccess(i18n.global.t('commons.msg.updateSuccess'));
@@ -212,8 +212,6 @@ const acceptParams = (props: EditProps) => {
     form.value.path = props.path;
     config.language = props.language;
     fileName.value = props.name;
-    // TODO Now,1panel only support liunux,so we can use LF.
-    // better,We should rely on the actual line feed character of the file returned from the background
     config.eol = monaco.editor.EndOfLineSequence.LF;
     open.value = true;
 };

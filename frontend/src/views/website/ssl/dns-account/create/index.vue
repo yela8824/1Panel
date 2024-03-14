@@ -22,10 +22,21 @@
                                 :value="type.value"
                             ></el-option>
                         </el-select>
+                        <span class="input-help text-red-500" v-if="account.type === 'DnsPod'">
+                            {{ $t('ssl.deprecatedHelper') }}
+                        </span>
                     </el-form-item>
                     <div v-if="account.type === 'AliYun'">
                         <el-form-item label="Access Key" prop="authorization.accessKey">
                             <el-input v-model.trim="account.authorization['accessKey']"></el-input>
+                        </el-form-item>
+                        <el-form-item label="Secret Key" prop="authorization.secretKey">
+                            <el-input v-model.trim="account.authorization['secretKey']"></el-input>
+                        </el-form-item>
+                    </div>
+                    <div v-if="account.type === 'TencentCloud'">
+                        <el-form-item label="Secret ID" prop="authorization.secretID">
+                            <el-input v-model.trim="account.authorization['secretID']"></el-input>
                         </el-form-item>
                         <el-form-item label="Secret Key" prop="authorization.secretKey">
                             <el-input v-model.trim="account.authorization['secretKey']"></el-input>
@@ -44,19 +55,21 @@
                         <el-form-item label="EMAIL" prop="authorization.email">
                             <el-input v-model.trim="account.authorization['email']"></el-input>
                         </el-form-item>
+                        <el-form-item label="API Token" prop="authorization.apiKey">
+                            <el-input v-model.trim="account.authorization['apiKey']"></el-input>
+                            <span class="input-help">
+                                {{ $t('ssl.cfHelper') }}
+                            </span>
+                        </el-form-item>
                     </div>
                     <el-form-item
                         label="API Key"
                         prop="authorization.apiKey"
-                        v-if="
-                            account.type === 'CloudFlare' ||
-                            account.type === 'NameCheap' ||
-                            account.type === 'NameSilo' ||
-                            account.type === 'Godaddy'
-                        "
+                        v-if="account.type === 'NameCheap' || account.type === 'NameSilo' || account.type === 'Godaddy'"
                     >
                         <el-input v-model.trim="account.authorization['apiKey']"></el-input>
                     </el-form-item>
+
                     <el-form-item label="API User" prop="authorization.apiUser" v-if="account.type === 'NameCheap'">
                         <el-input v-model.trim="account.authorization['apiUser']"></el-input>
                     </el-form-item>
@@ -117,6 +130,7 @@ const rules = ref<any>({
         email: [Rules.requiredInput],
         apiKey: [Rules.requiredInput],
         apiUser: [Rules.requiredInput],
+        secretID: [Rules.requiredInput],
     },
 });
 const account = ref({

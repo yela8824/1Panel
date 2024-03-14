@@ -7,6 +7,9 @@
                         <el-button type="primary" @click="onCreate()">
                             {{ $t('setting.createSnapshot') }}
                         </el-button>
+                        <el-button type="primary" plain @click="onIgnore()">
+                            {{ $t('setting.ignoreRule') }}
+                        </el-button>
                         <el-button type="primary" plain @click="onImport()">
                             {{ $t('setting.importSnapshot') }}
                         </el-button>
@@ -16,17 +19,7 @@
                     </el-col>
                     <el-col :xs="24" :sm="8" :md="8" :lg="8" :xl="8">
                         <TableSetting ref="timerRef" @search="search()" />
-                        <div class="search-button">
-                            <el-input
-                                clearable
-                                v-model="searchName"
-                                @clear="search()"
-                                suffix-icon="Search"
-                                @keyup.enter="search()"
-                                @change="search()"
-                                :placeholder="$t('commons.button.search')"
-                            ></el-input>
-                        </div>
+                        <TableSearch @search="search()" v-model:searchName="searchName" />
                     </el-col>
                 </el-row>
             </template>
@@ -49,9 +42,33 @@
                     <el-table-column prop="version" :label="$t('app.version')" />
                     <el-table-column :label="$t('setting.backupAccount')" min-width="80" prop="from">
                         <template #default="{ row }">
-                            <span v-if="row.from">
-                                {{ $t('setting.' + row.from) }}
-                            </span>
+                            <div v-for="(item, index) of row.from.split(',')" :key="index" class="mt-1">
+                                <div v-if="row.expand || (!row.expand && index < 3)">
+                                    <span v-if="row.from" type="info">
+                                        <span>
+                                            {{ $t('setting.' + item) }}
+                                        </span>
+                                        <el-icon
+                                            v-if="item === row.defaultDownload"
+                                            size="12"
+                                            class="relative top-px left-1"
+                                        >
+                                            <Star />
+                                        </el-icon>
+                                    </span>
+                                    <span v-else>-</span>
+                                </div>
+                            </div>
+                            <div v-if="!row.expand && row.from.split(',').length > 3">
+                                <el-button type="primary" link @click="row.expand = true">
+                                    {{ $t('commons.button.expand') }}...
+                                </el-button>
+                            </div>
+                            <div v-if="row.expand && row.from.split(',').length > 3">
+                                <el-button type="primary" link @click="row.expand = false">
+                                    {{ $t('commons.button.collapse') }}
+                                </el-button>
+                            </div>
                         </template>
                     </el-table-column>
                     <el-table-column :label="$t('commons.table.status')" min-width="80" prop="status">
@@ -109,13 +126,20 @@
             >
                 <el-row type="flex" justify="center">
                     <el-col :span="22">
-                        <el-form-item
-                            :label="$t('cronjob.target') + ' ( ' + $t('setting.thirdPartySupport') + ' )'"
-                            prop="from"
-                        >
-                            <el-select v-model="snapInfo.from" clearable>
+                        <el-form-item :label="$t('setting.backupAccount')" prop="fromAccounts">
+                            <el-select multiple @change="changeAccount" v-model="snapInfo.fromAccounts" clearable>
                                 <el-option
                                     v-for="item in backupOptions"
+                                    :key="item.label"
+                                    :value="item.value"
+                                    :label="item.label"
+                                />
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item :label="$t('cronjob.default_download_path')" prop="defaultDownload">
+                            <el-select v-model="snapInfo.defaultDownload" clearable>
+                                <el-option
+                                    v-for="item in accountOptions"
                                     :key="item.label"
                                     :value="item.value"
                                     :label="item.label"
@@ -142,12 +166,11 @@
 
         <OpDialog ref="opRef" @search="search" />
         <SnapStatus ref="snapStatusRef" @search="search" />
+        <IgnoreRule ref="ignoreRef" />
     </div>
 </template>
 
 <script setup lang="ts">
-import OpDialog from '@/components/del-dialog/index.vue';
-import TableSetting from '@/components/table-setting/index.vue';
 import DrawerHeader from '@/components/drawer-header/index.vue';
 import { snapshotCreate, searchSnapshotPage, snapshotDelete, updateSnapshotDescription } from '@/api/modules/setting';
 import { onMounted, reactive, ref } from 'vue';
@@ -156,6 +179,7 @@ import { ElForm } from 'element-plus';
 import { Rules } from '@/global/form-rules';
 import i18n from '@/lang';
 import { Setting } from '@/api/interface/setting';
+import IgnoreRule from '@/views/setting/snapshot/ignore-rule/index.vue';
 import SnapStatus from '@/views/setting/snapshot/snap_status/index.vue';
 import RecoverStatus from '@/views/setting/snapshot/status/index.vue';
 import SnapshotImport from '@/views/setting/snapshot/import/index.vue';
@@ -174,21 +198,27 @@ const paginationConfig = reactive({
 const searchName = ref();
 
 const opRef = ref();
+const ignoreRef = ref();
 
 const snapStatusRef = ref();
 const recoverStatusRef = ref();
 const importRef = ref();
 const isRecordShow = ref();
 const backupOptions = ref();
+const accountOptions = ref();
+
 type FormInstance = InstanceType<typeof ElForm>;
 const snapRef = ref<FormInstance>();
 const rules = reactive({
-    from: [Rules.requiredSelect],
+    fromAccounts: [Rules.requiredSelect],
+    defaultDownload: [Rules.requiredSelect],
 });
 
 let snapInfo = reactive<Setting.SnapshotCreate>({
     id: 0,
     from: '',
+    defaultDownload: '',
+    fromAccounts: [],
     description: '',
 });
 
@@ -200,7 +230,15 @@ const onCreate = async () => {
 };
 
 const onImport = () => {
-    importRef.value.acceptParams();
+    let names = [];
+    for (const item of data.value) {
+        names.push(item.name);
+    }
+    importRef.value.acceptParams({ names: names });
+};
+
+const onIgnore = () => {
+    ignoreRef.value.acceptParams();
 };
 
 const handleClose = () => {
@@ -217,6 +255,7 @@ const submitAddSnapshot = (formEl: FormInstance | undefined) => {
     formEl.validate(async (valid) => {
         if (!valid) return;
         loading.value = true;
+        snapInfo.from = snapInfo.fromAccounts.join(',');
         await snapshotCreate(snapInfo)
             .then(() => {
                 loading.value = false;
@@ -231,16 +270,45 @@ const submitAddSnapshot = (formEl: FormInstance | undefined) => {
 };
 
 const onLoadStatus = (row: Setting.SnapshotInfo) => {
-    snapStatusRef.value.acceptParams({ id: row.id, from: row.from, description: row.description });
+    snapStatusRef.value.acceptParams({
+        id: row.id,
+        from: row.from,
+        defaultDownload: row.defaultDownload,
+        description: row.description,
+    });
 };
 
 const loadBackups = async () => {
     const res = await getBackupList();
     backupOptions.value = [];
     for (const item of res.data) {
-        if (item.type !== 'LOCAL' && item.id !== 0) {
+        if (item.id !== 0) {
             backupOptions.value.push({ label: i18n.global.t('setting.' + item.type), value: item.type });
         }
+    }
+    changeAccount();
+};
+
+const changeAccount = async () => {
+    accountOptions.value = [];
+    let isInAccounts = false;
+    for (const item of backupOptions.value) {
+        let exist = false;
+        for (const ac of snapInfo.fromAccounts) {
+            if (item.value == ac) {
+                exist = true;
+                break;
+            }
+        }
+        if (exist) {
+            if (item.value === snapInfo.defaultDownload) {
+                isInAccounts = true;
+            }
+            accountOptions.value.push(item);
+        }
+    }
+    if (!isInAccounts) {
+        snapInfo.defaultDownload = '';
     }
 };
 

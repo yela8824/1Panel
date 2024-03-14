@@ -62,6 +62,7 @@ var (
 	ErrAppNameExist        = "ErrAppNameExist"
 	ErrFileNotFound        = "ErrFileNotFound"
 	ErrFileParseApp        = "ErrFileParseApp"
+	ErrAppParamKey         = "ErrAppParamKey"
 )
 
 // website
@@ -116,6 +117,7 @@ var (
 	ErrInUsed       = "ErrInUsed"
 	ErrObjectInUsed = "ErrObjectInUsed"
 	ErrPortRules    = "ErrPortRules"
+	ErrPgImagePull  = "ErrPgImagePull"
 )
 
 // runtime

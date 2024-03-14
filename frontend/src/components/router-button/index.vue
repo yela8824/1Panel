@@ -4,6 +4,7 @@
             <el-radio-button
                 class="router_card_button"
                 :label="button.label"
+                :value="button.label"
                 v-for="(button, index) in buttonArray"
                 size="large"
                 :key="index"
@@ -54,7 +55,9 @@ const handleChange = (label: string) => {
 onMounted(() => {
     if (buttonArray.value.length) {
         let isPathExist = false;
-        const btn = buttonArray.value.find((btn) => btn.path === router.currentRoute.value.path);
+        const btn = buttonArray.value.find((btn) => {
+            return router.currentRoute.value.path.startsWith(btn.path);
+        });
         if (btn) {
             isPathExist = true;
             activeName.value = btn.label;

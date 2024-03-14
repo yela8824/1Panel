@@ -14,8 +14,8 @@
                         type="warning"
                     />
                     <el-radio-group v-model="confShowType" @change="changeMode">
-                        <el-radio-button label="form">{{ $t('database.baseConf') }}</el-radio-button>
-                        <el-radio-button label="all">{{ $t('database.allConf') }}</el-radio-button>
+                        <el-radio-button value="form">{{ $t('database.baseConf') }}</el-radio-button>
+                        <el-radio-button value="all">{{ $t('database.allConf') }}</el-radio-button>
                     </el-radio-group>
                     <el-form
                         class="mt-4"
@@ -29,7 +29,7 @@
                             <el-input
                                 type="textarea"
                                 :placeholder="$t('toolbox.device.dnsHelper1')"
-                                :autosize="{ minRows: 8, maxRows: 10 }"
+                                :rows="8"
                                 v-model="form.dns"
                             />
                         </el-form-item>
@@ -40,7 +40,7 @@
                             placeholder="# The DNS configuration file does not exist or is empty (/etc/resolv.conf)"
                             :indent-with-tab="true"
                             :tabSize="4"
-                            style="margin-top: 10px; height: calc(100vh - 200px)"
+                            style="margin-top: 10px; height: calc(100vh - 260px)"
                             :lineWrapping="true"
                             :matchBrackets="true"
                             theme="cobalt"

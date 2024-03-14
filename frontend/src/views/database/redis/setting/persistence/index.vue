@@ -21,9 +21,9 @@
                                 </el-form-item>
                                 <el-form-item label="appendfsync" prop="appendfsync">
                                     <el-radio-group style="width: 100%" v-model="form.appendfsync">
-                                        <el-radio label="always">always</el-radio>
-                                        <el-radio label="everysec">everysec</el-radio>
-                                        <el-radio label="no">no</el-radio>
+                                        <el-radio value="always">always</el-radio>
+                                        <el-radio value="everysec">everysec</el-radio>
+                                        <el-radio value="no">no</el-radio>
                                     </el-radio-group>
                                 </el-form-item>
                                 <el-form-item>
@@ -113,7 +113,6 @@
 </template>
 
 <script lang="ts" setup>
-import OpDialog from '@/components/del-dialog/index.vue';
 import ConfirmDialog from '@/components/confirm-dialog/index.vue';
 import { Database } from '@/api/interface/database';
 import { redisPersistenceConf, updateRedisPersistenceConf } from '@/api/modules/database';
@@ -292,10 +291,10 @@ const onSave = async (formEl: FormInstance | undefined, type: string) => {
             MsgInfo(i18n.global.t('database.rdbInfo'));
             return;
         }
-        itemSaves.push(item.second + '', item.count + '');
+        itemSaves.push(item.second + ' ' + item.count);
     }
     param.type = type;
-    param.save = itemSaves.join(' ');
+    param.save = itemSaves.join(',');
     emit('loading', true);
     await updateRedisPersistenceConf(param)
         .then(() => {

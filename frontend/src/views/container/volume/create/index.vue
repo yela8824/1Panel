@@ -33,8 +33,8 @@
                         </el-form-item>
                         <el-form-item :label="$t('container.version')" prop="nfsVersion">
                             <el-radio-group v-model="form.nfsVersion">
-                                <el-radio label="v3">NFS</el-radio>
-                                <el-radio label="v4">NFS4</el-radio>
+                                <el-radio value="v3">NFS</el-radio>
+                                <el-radio value="v4">NFS4</el-radio>
                             </el-radio-group>
                         </el-form-item>
                         <el-form-item :label="$t('container.mountpoint')" prop="nfsMount">
@@ -52,7 +52,7 @@
                         <el-input
                             type="textarea"
                             :placeholder="$t('container.tagHelper')"
-                            :autosize="{ minRows: 2, maxRows: 4 }"
+                            :rows="3"
                             v-model="form.optionStr"
                         />
                     </el-form-item>
@@ -60,7 +60,7 @@
                         <el-input
                             type="textarea"
                             :placeholder="$t('container.tagHelper')"
-                            :autosize="{ minRows: 2, maxRows: 4 }"
+                            :rows="3"
                             v-model="form.labelStr"
                         />
                     </el-form-item>

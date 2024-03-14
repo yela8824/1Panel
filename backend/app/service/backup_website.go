@@ -15,6 +15,7 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/global"
 	"github.com/1Panel-dev/1Panel/backend/utils/cmd"
+	"github.com/1Panel-dev/1Panel/backend/utils/common"
 	"github.com/1Panel-dev/1Panel/backend/utils/compose"
 	"github.com/1Panel-dev/1Panel/backend/utils/files"
 	"github.com/pkg/errors"
@@ -25,14 +26,15 @@ func (u *BackupService) WebsiteBackup(req dto.CommonBackup) error {
 	if err != nil {
 		return err
 	}
-	website, err := websiteRepo.GetFirst(websiteRepo.WithDomain(req.Name))
+	website, err := websiteRepo.GetFirst(websiteRepo.WithAlias(req.DetailName))
 	if err != nil {
 		return err
 	}
 
 	timeNow := time.Now().Format("20060102150405")
-	backupDir := path.Join(localDir, fmt.Sprintf("website/%s", req.Name))
-	fileName := fmt.Sprintf("%s_%s.tar.gz", website.PrimaryDomain, timeNow)
+	itemDir := fmt.Sprintf("website/%s", req.Name)
+	backupDir := path.Join(localDir, itemDir)
+	fileName := fmt.Sprintf("%s_%s.tar.gz", website.PrimaryDomain, timeNow+common.RandStrAndNum(5))
 	if err := handleWebsiteBackup(&website, backupDir, fileName); err != nil {
 		return err
 	}
@@ -40,10 +42,10 @@ func (u *BackupService) WebsiteBackup(req dto.CommonBackup) error {
 	record := &model.BackupRecord{
 		Type:       "website",
 		Name:       website.PrimaryDomain,
-		DetailName: "",
+		DetailName: req.DetailName,
 		Source:     "LOCAL",
 		BackupType: "LOCAL",
-		FileDir:    backupDir,
+		FileDir:    itemDir,
 		FileName:   fileName,
 	}
 	if err := backupRepo.CreateRecord(record); err != nil {
@@ -54,13 +56,13 @@ func (u *BackupService) WebsiteBackup(req dto.CommonBackup) error {
 }
 
 func (u *BackupService) WebsiteRecover(req dto.CommonRecover) error {
-	website, err := websiteRepo.GetFirst(websiteRepo.WithDomain(req.Name))
-	if err != nil {
-		return err
-	}
 	fileOp := files.NewFileOp()
 	if !fileOp.Stat(req.File) {
-		return errors.New(fmt.Sprintf("%s file is not exist", req.File))
+		return buserr.WithName("ErrFileNotFound", req.File)
+	}
+	website, err := websiteRepo.GetFirst(websiteRepo.WithAlias(req.DetailName))
+	if err != nil {
+		return err
 	}
 	global.LOG.Infof("recover website %s from backup file %s", req.Name, req.File)
 	if err := handleWebsiteRecover(&website, req.File, false); err != nil {
@@ -79,15 +81,6 @@ func handleWebsiteRecover(website *model.Website, recoverFile string, isRollback
 		_ = os.RemoveAll(tmpPath)
 	}()
 
-	temPathWithName := tmpPath + "/" + website.Alias
-	if !fileOp.Stat(tmpPath+"/website.json") || !fileOp.Stat(temPathWithName+".conf") || !fileOp.Stat(temPathWithName+".web.tar.gz") {
-		return buserr.WithDetail(constant.ErrBackupExist, ".conf or .web.tar.gz", nil)
-	}
-	if website.Type == constant.Deployment {
-		if !fileOp.Stat(temPathWithName + ".app.tar.gz") {
-			return buserr.WithDetail(constant.ErrBackupExist, ".app.tar.gz", nil)
-		}
-	}
 	var oldWebsite model.Website
 	websiteJson, err := os.ReadFile(tmpPath + "/website.json")
 	if err != nil {
@@ -99,6 +92,16 @@ func handleWebsiteRecover(website *model.Website, recoverFile string, isRollback
 
 	if err := checkValidOfWebsite(&oldWebsite, website); err != nil {
 		return err
+	}
+
+	temPathWithName := tmpPath + "/" + website.Alias
+	if !fileOp.Stat(tmpPath+"/website.json") || !fileOp.Stat(temPathWithName+".conf") || !fileOp.Stat(temPathWithName+".web.tar.gz") {
+		return buserr.WithDetail(constant.ErrBackupExist, ".conf or .web.tar.gz", nil)
+	}
+	if website.Type == constant.Deployment {
+		if !fileOp.Stat(temPathWithName + ".app.tar.gz") {
+			return buserr.WithDetail(constant.ErrBackupExist, ".app.tar.gz", nil)
+		}
 	}
 
 	isOk := false

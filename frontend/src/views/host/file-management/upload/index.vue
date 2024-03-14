@@ -42,11 +42,11 @@
             :show-file-list="false"
             multiple
             v-model:file-list="uploaderFiles"
-            :limit="10"
+            :limit="1000"
         >
             <template #tip>
                 <el-text>{{ uploadHelper }}</el-text>
-                <el-progress v-if="loading" text-inside :stroke-width="20" :percentage="uploadPrecent"></el-progress>
+                <el-progress v-if="loading" text-inside :stroke-width="20" :percentage="uploadPercent"></el-progress>
             </template>
         </el-upload>
 
@@ -70,6 +70,7 @@
                         type="primary"
                         link
                         @click="removeFile(index)"
+                        :disabled="loading"
                         :icon="Close"
                     ></el-button>
                 </span>
@@ -92,7 +93,7 @@ import { UploadFile, UploadFiles, UploadInstance, UploadProps, UploadRawFile } f
 import { ChunkUploadFileData, UploadFileData } from '@/api/modules/files';
 import i18n from '@/lang';
 import DrawerHeader from '@/components/drawer-header/index.vue';
-import { MsgError, MsgSuccess } from '@/utils/message';
+import { MsgError, MsgSuccess, MsgWarning } from '@/utils/message';
 import { Close } from '@element-plus/icons-vue';
 import { TimeoutEnum } from '@/enums/http-enum';
 
@@ -102,7 +103,7 @@ interface UploadFileProps {
 
 const uploadRef = ref<UploadInstance>();
 const loading = ref(false);
-let uploadPrecent = ref(0);
+let uploadPercent = ref(0);
 const open = ref(false);
 const path = ref();
 let uploadHelper = ref('');
@@ -120,10 +121,12 @@ const uploaderFiles = ref<UploadFiles>([]);
 const isUploadFolder = ref(false);
 const hoverIndex = ref(null);
 const uploadType = ref('file');
+const tmpFiles = ref<UploadFiles>([]);
+const breakFlag = ref(false);
 
-const upload = (commnad: string) => {
-    uploadType.value = commnad;
-    if (commnad == 'dir') {
+const upload = (command: string) => {
+    uploadType.value = command;
+    if (command == 'dir') {
         state.uploadEle.webkitdirectory = true;
     } else {
         state.uploadEle.webkitdirectory = false;
@@ -140,7 +143,13 @@ const handleDragover = (event: DragEvent) => {
     event.preventDefault();
 };
 
-const handleDrop = (event: DragEvent) => {
+const initTempFiles = () => {
+    tmpFiles.value = [];
+    breakFlag.value = false;
+};
+
+const handleDrop = async (event: DragEvent) => {
+    initTempFiles();
     event.preventDefault();
     const items = event.dataTransfer.items;
 
@@ -148,9 +157,15 @@ const handleDrop = (event: DragEvent) => {
         for (let i = 0; i < items.length; i++) {
             const entry = items[i].webkitGetAsEntry();
             if (entry) {
-                traverseFileTree(entry);
+                await traverseFileTree(entry);
             }
         }
+        if (!breakFlag.value) {
+            uploaderFiles.value = uploaderFiles.value.concat(tmpFiles.value);
+        } else {
+            MsgWarning(i18n.global.t('file.uploadOverLimit'));
+        }
+        initTempFiles();
     }
 };
 
@@ -176,19 +191,44 @@ const convertFileToUploadFile = (file: File, path: string): UploadFile => {
     };
 };
 
-const traverseFileTree = (item: any, path = '') => {
+const traverseFileTree = async (item: any, path = '') => {
     path = path || '';
+
     if (item.isFile) {
-        item.file((file: File) => {
-            uploaderFiles.value.push(convertFileToUploadFile(file, path));
+        if (tmpFiles.value.length > 1000) {
+            breakFlag.value = true;
+            return;
+        }
+        await new Promise<void>((resolve) => {
+            item.file((file: File) => {
+                if (!breakFlag.value) {
+                    tmpFiles.value.push(convertFileToUploadFile(file, path));
+                }
+                resolve();
+            });
         });
     } else if (item.isDirectory) {
         const dirReader = item.createReader();
-        dirReader.readEntries((entries) => {
-            for (let i = 0; i < entries.length; i++) {
-                traverseFileTree(entries[i], path + item.name + '/');
+        const readEntries = async () => {
+            const entries = await new Promise<any[]>((resolve) => {
+                dirReader.readEntries((entries) => {
+                    resolve(entries);
+                });
+            });
+
+            if (entries.length === 0) {
+                return;
             }
-        });
+
+            for (let i = 0; i < entries.length; i++) {
+                await traverseFileTree(entries[i], path + item.name + '/');
+                if (breakFlag.value) {
+                    return;
+                }
+            }
+            await readEntries();
+        };
+        await readEntries();
     }
 };
 
@@ -215,12 +255,9 @@ const clearFiles = () => {
     uploadRef.value!.clearFiles();
 };
 
-const handleExceed: UploadProps['onExceed'] = (files) => {
+const handleExceed: UploadProps['onExceed'] = () => {
     uploadRef.value!.clearFiles();
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i] as UploadRawFile;
-        uploadRef.value!.handleStart(file);
-    }
+    MsgWarning(i18n.global.t('file.uploadOverLimit'));
 };
 
 const hadleSuccess: UploadProps['onSuccess'] = (res, file) => {
@@ -244,11 +281,11 @@ const submit = async () => {
             } else {
                 formData.append('path', path.value + '/' + getPathWithoutFilename(file.name));
             }
-            uploadPrecent.value = 0;
+            uploadPercent.value = 0;
             await UploadFileData(formData, {
                 onUploadProgress: (progressEvent) => {
                     const progress = Math.round((progressEvent.loaded / progressEvent.total) * 100);
-                    uploadPrecent.value = progress;
+                    uploadPercent.value = progress;
                 },
                 timeout: 40000,
             });
@@ -264,7 +301,7 @@ const submit = async () => {
                 const chunk = file.raw.slice(start, end);
                 const formData = new FormData();
 
-                formData.append('filename', file.name);
+                formData.append('filename', getFilenameFromPath(file.name));
                 if (file.raw.webkitRelativePath != '') {
                     formData.append('path', path.value + '/' + getPathWithoutFilename(file.raw.webkitRelativePath));
                 } else {
@@ -280,7 +317,7 @@ const submit = async () => {
                             const progress = Math.round(
                                 ((uploadedChunkCount + progressEvent.loaded / progressEvent.total) * 100) / chunkCount,
                             );
-                            uploadPrecent.value = progress;
+                            uploadPercent.value = progress;
                         },
                         timeout: TimeoutEnum.T_60S,
                     });
@@ -313,10 +350,14 @@ const getPathWithoutFilename = (path: string) => {
     return path ? path.split('/').slice(0, -1).join('/') : path;
 };
 
+const getFilenameFromPath = (path) => {
+    return path ? path.split('/').pop() : path;
+};
+
 const acceptParams = (props: UploadFileProps) => {
     path.value = props.path;
     open.value = true;
-    uploadPrecent.value = 0;
+    uploadPercent.value = 0;
     uploadHelper.value = '';
 
     nextTick(() => {
@@ -336,7 +377,7 @@ defineExpose({ acceptParams });
 }
 
 .file-item {
-    font-size: 12px;
+    font-size: 14px;
     color: #888;
     position: relative;
     display: flex;

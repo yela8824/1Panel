@@ -21,7 +21,7 @@
                     <template #prompt>
                         <el-alert type="info" :closable="false">
                             <template #default>
-                                <span>
+                                <span class="flx-align-center">
                                     <span>{{ $t('firewall.dockerHelper', [fireName]) }}</span>
                                     <el-link
                                         style="font-size: 12px; margin-left: 5px"
@@ -37,13 +37,19 @@
                     </template>
                     <template #search>
                         <div class="flx-align-center">
-                            <el-select v-model="searchStatus" @change="search()" clearable>
+                            <el-select v-model="searchStatus" @change="search()" clearable class="p-w-200">
                                 <template #prefix>{{ $t('commons.table.status') }}</template>
                                 <el-option :label="$t('commons.table.all')" value=""></el-option>
                                 <el-option :label="$t('firewall.unUsed')" value="free"></el-option>
                                 <el-option :label="$t('firewall.used')" value="used"></el-option>
                             </el-select>
-                            <el-select v-model="searchStrategy" style="margin-left: 10px" @change="search()" clearable>
+                            <el-select
+                                v-model="searchStrategy"
+                                style="margin-left: 10px"
+                                @change="search()"
+                                clearable
+                                class="p-w-200"
+                            >
                                 <template #prefix>{{ $t('firewall.strategy') }}</template>
                                 <el-option :label="$t('commons.table.all')" value=""></el-option>
                                 <el-option :label="$t('firewall.accept')" value="accept"></el-option>
@@ -63,15 +69,7 @@
                             </el-col>
                             <el-col :span="8">
                                 <TableSetting @search="search()" />
-                                <div class="search-button">
-                                    <el-input
-                                        clearable
-                                        v-model="searchName"
-                                        suffix-icon="Search"
-                                        @change="search()"
-                                        :placeholder="$t('commons.button.search')"
-                                    ></el-input>
-                                </div>
+                                <TableSearch @search="search()" v-model:searchName="searchName" />
                             </el-col>
                         </el-row>
                     </template>
@@ -180,8 +178,6 @@
 
 <script lang="ts" setup>
 import FireRouter from '@/views/host/firewall/index.vue';
-import OpDialog from '@/components/del-dialog/index.vue';
-import TableSetting from '@/components/table-setting/index.vue';
 import OperateDialog from '@/views/host/firewall/port/operate/index.vue';
 import FireStatus from '@/views/host/firewall/status/index.vue';
 import { onMounted, reactive, ref } from 'vue';

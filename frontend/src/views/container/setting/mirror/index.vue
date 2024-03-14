@@ -18,7 +18,7 @@
                             <el-input
                                 type="textarea"
                                 :placeholder="$t('container.mirrorHelper')"
-                                :autosize="{ minRows: 8, maxRows: 10 }"
+                                :rows="5"
                                 v-model="form.mirrors"
                             />
                         </el-form-item>
@@ -67,9 +67,12 @@ const rules = reactive({
 
 function checkMirrors(rule: any, value: any, callback: any) {
     if (form.mirrors !== '') {
-        const reg = /^https?:\/\/[a-zA-Z0-9.-]+$/;
+        const reg = /^https?:\/\/[a-zA-Z0-9./-]+$/;
         let mirrors = form.mirrors.split('\n');
         for (const item of mirrors) {
+            if (item === '') {
+                continue;
+            }
             if (!reg.test(item)) {
                 return callback(new Error(i18n.global.t('commons.rule.mirror')));
             }

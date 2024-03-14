@@ -12,8 +12,9 @@ var (
 	appInstallRepo         = repo.NewIAppInstallRepo()
 	appInstallResourceRepo = repo.NewIAppInstallResourceRpo()
 
-	mysqlRepo    = repo.NewIMysqlRepo()
-	databaseRepo = repo.NewIDatabaseRepo()
+	mysqlRepo      = repo.NewIMysqlRepo()
+	postgresqlRepo = repo.NewIPostgresqlRepo()
+	databaseRepo   = repo.NewIDatabaseRepo()
 
 	imageRepoRepo = repo.NewIImageRepoRepo()
 	composeRepo   = repo.NewIComposeTemplateRepo()
@@ -37,7 +38,8 @@ var (
 	logRepo      = repo.NewILogRepo()
 	snapshotRepo = repo.NewISnapshotRepo()
 
-	runtimeRepo = repo.NewIRunTimeRepo()
+	runtimeRepo       = repo.NewIRunTimeRepo()
+	phpExtensionsRepo = repo.NewIPHPExtensionsRepo()
 
 	favoriteRepo = repo.NewIFavoriteRepo()
 )

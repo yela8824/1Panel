@@ -14,6 +14,7 @@ import (
 	"github.com/1Panel-dev/1Panel/backend/constant"
 	"github.com/1Panel-dev/1Panel/backend/global"
 	"github.com/1Panel-dev/1Panel/backend/utils/cmd"
+	"github.com/1Panel-dev/1Panel/backend/utils/common"
 	"github.com/1Panel-dev/1Panel/backend/utils/compose"
 	"github.com/1Panel-dev/1Panel/backend/utils/files"
 	"github.com/pkg/errors"
@@ -34,7 +35,7 @@ func (u *BackupService) RedisBackup() error {
 	}
 	global.LOG.Infof("appendonly in redis conf is %s", appendonly)
 
-	timeNow := time.Now().Format("20060102150405")
+	timeNow := time.Now().Format("20060102150405") + common.RandStrAndNum(5)
 	fileName := fmt.Sprintf("%s.rdb", timeNow)
 	if appendonly == "yes" {
 		if strings.HasPrefix(redisInfo.Version, "6.") {
@@ -43,7 +44,8 @@ func (u *BackupService) RedisBackup() error {
 			fileName = fmt.Sprintf("%s.tar.gz", timeNow)
 		}
 	}
-	backupDir := path.Join(localDir, fmt.Sprintf("database/redis/%s", redisInfo.Name))
+	itemDir := fmt.Sprintf("database/redis/%s", redisInfo.Name)
+	backupDir := path.Join(localDir, itemDir)
 	if err := handleRedisBackup(redisInfo, backupDir, fileName); err != nil {
 		return err
 	}
@@ -51,7 +53,7 @@ func (u *BackupService) RedisBackup() error {
 		Type:       "redis",
 		Source:     "LOCAL",
 		BackupType: "LOCAL",
-		FileDir:    backupDir,
+		FileDir:    itemDir,
 		FileName:   fileName,
 	}
 	if err := backupRepo.CreateRecord(record); err != nil {
@@ -111,7 +113,7 @@ func handleRedisBackup(redisInfo *repo.RootInfo, backupDir, fileName string) err
 func handleRedisRecover(redisInfo *repo.RootInfo, recoverFile string, isRollback bool) error {
 	fileOp := files.NewFileOp()
 	if !fileOp.Stat(recoverFile) {
-		return fmt.Errorf("%s file is not exist", recoverFile)
+		return buserr.WithName("ErrFileNotFound", recoverFile)
 	}
 
 	appendonly, err := configGetStr(redisInfo.ContainerName, redisInfo.Password, "appendonly")

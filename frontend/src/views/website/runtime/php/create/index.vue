@@ -22,10 +22,10 @@
                             v-model="runtime.resource"
                             @change="changeResource(runtime.resource)"
                         >
-                            <el-radio :label="'appstore'">
+                            <el-radio :value="'appstore'">
                                 {{ $t('runtime.appstore') }}
                             </el-radio>
-                            <el-radio :label="'local'">
+                            <el-radio :value="'local'">
                                 {{ $t('runtime.local') }}
                             </el-radio>
                         </el-radio-group>
@@ -38,6 +38,7 @@
                                         v-model="runtime.appID"
                                         :disabled="mode === 'edit'"
                                         @change="changeApp(runtime.appID)"
+                                        class="p-w-200"
                                     >
                                         <el-option
                                             v-for="(app, index) in apps"
@@ -52,6 +53,7 @@
                                         v-model="runtime.version"
                                         :disabled="mode === 'edit'"
                                         @change="changeVersion()"
+                                        class="p-w-200"
                                     >
                                         <el-option
                                             v-for="(version, index) in appVersions"
@@ -81,7 +83,16 @@
                                         {{ $t('runtime.phpsourceHelper') }}
                                     </span>
                                 </el-form-item>
-
+                                <el-form-item :label="$t('php.extensions')">
+                                    <el-select v-model="extensions" @change="changePHPExtension()" clearable>
+                                        <el-option
+                                            v-for="(extension, index) in phpExtensions"
+                                            :key="index"
+                                            :label="extension.name"
+                                            :value="extension.extensions"
+                                        ></el-option>
+                                    </el-select>
+                                </el-form-item>
                                 <Params
                                     v-if="mode === 'create'"
                                     v-model:form="runtime.params"
@@ -146,7 +157,7 @@
 import { App } from '@/api/interface/app';
 import { Runtime } from '@/api/interface/runtime';
 import { GetApp, GetAppDetail, SearchApp } from '@/api/modules/app';
-import { CreateRuntime, GetRuntime, UpdateRuntime } from '@/api/modules/runtime';
+import { CreateRuntime, GetRuntime, ListPHPExtensions, UpdateRuntime } from '@/api/modules/runtime';
 import { Rules } from '@/global/form-rules';
 import i18n from '@/lang';
 import { MsgSuccess } from '@/utils/message';
@@ -172,6 +183,7 @@ const mode = ref('create');
 const appParams = ref<App.AppParams>();
 const editParams = ref<App.InstallParams[]>();
 const appVersions = ref<string[]>([]);
+const phpExtensions = ref([]);
 const appReq = reactive({
     type: 'php',
     page: 1,
@@ -187,6 +199,7 @@ const initData = (type: string) => ({
     rebuild: false,
     source: 'mirrors.ustc.edu.cn',
 });
+const extensions = ref();
 
 let runtime = reactive<Runtime.RuntimeCreate>(initData('php'));
 
@@ -268,6 +281,7 @@ const searchApp = (appId: number) => {
 };
 
 const changeApp = (appId: number) => {
+    extensions.value = undefined;
     for (const app of apps.value) {
         if (app.id === appId) {
             initParam.value = false;
@@ -280,6 +294,7 @@ const changeApp = (appId: number) => {
 const changeVersion = () => {
     loading.value = true;
     initParam.value = false;
+    extensions.value = undefined;
     GetAppDetail(runtime.appID, runtime.version, 'runtime')
         .then((res) => {
             runtime.appDetailID = res.data.id;
@@ -364,6 +379,24 @@ const getRuntime = async (id: number) => {
     } catch (error) {}
 };
 
+const listPHPExtensions = async () => {
+    try {
+        const res = await ListPHPExtensions({
+            all: true,
+            page: 1,
+            pageSize: 100,
+        });
+        phpExtensions.value = res.data;
+    } catch (error) {}
+};
+
+const changePHPExtension = () => {
+    if (extensions.value == '') {
+        return;
+    }
+    runtime.params['PHP_EXTENSIONS'] = extensions.value.split(',');
+};
+
 const acceptParams = async (props: OperateRrops) => {
     mode.value = props.mode;
     initParam.value = false;
@@ -374,6 +407,8 @@ const acceptParams = async (props: OperateRrops) => {
         searchApp(props.appID);
         getRuntime(props.id);
     }
+    extensions.value = '';
+    listPHPExtensions();
     open.value = true;
 };
 

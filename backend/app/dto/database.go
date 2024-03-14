@@ -2,6 +2,27 @@ package dto
 
 import "time"
 
+// common
+type DBConfUpdateByFile struct {
+	Type     string `json:"type" validate:"required,oneof=mysql mariadb postgresql redis"`
+	Database string `json:"database" validate:"required"`
+	File     string `json:"file"`
+}
+type ChangeDBInfo struct {
+	ID       uint   `json:"id"`
+	From     string `json:"from" validate:"required,oneof=local remote"`
+	Type     string `json:"type" validate:"required,oneof=mysql mariadb postgresql"`
+	Database string `json:"database" validate:"required"`
+	Value    string `json:"value" validate:"required"`
+}
+
+type DBBaseInfo struct {
+	Name          string `json:"name"`
+	ContainerName string `json:"containerName"`
+	Port          int64  `json:"port"`
+}
+
+// mysql
 type MysqlDBSearch struct {
 	PageInfo
 	Info     string `json:"info"`
@@ -41,6 +62,14 @@ type MysqlDBCreate struct {
 	Password    string `json:"password" validate:"required"`
 	Permission  string `json:"permission" validate:"required"`
 	Description string `json:"description"`
+}
+
+type BindUser struct {
+	Database   string `json:"database" validate:"required"`
+	DB         string `json:"db" validate:"required"`
+	Username   string `json:"username" validate:"required"`
+	Password   string `json:"password" validate:"required"`
+	Permission string `json:"permission" validate:"required"`
 }
 
 type MysqlLoadDB struct {
@@ -132,25 +161,6 @@ type MysqlVariablesUpdate struct {
 type MysqlVariablesUpdateHelper struct {
 	Param string      `json:"param"`
 	Value interface{} `json:"value"`
-}
-type MysqlConfUpdateByFile struct {
-	Type     string `json:"type" validate:"required,oneof=mysql mariadb"`
-	Database string `json:"database" validate:"required"`
-	File     string `json:"file"`
-}
-
-type ChangeDBInfo struct {
-	ID       uint   `json:"id"`
-	From     string `json:"from" validate:"required,oneof=local remote"`
-	Type     string `json:"type" validate:"required,oneof=mysql mariadb"`
-	Database string `json:"database" validate:"required"`
-	Value    string `json:"value" validate:"required"`
-}
-
-type DBBaseInfo struct {
-	Name          string `json:"name"`
-	ContainerName string `json:"containerName"`
-	Port          int64  `json:"port"`
 }
 
 // redis
@@ -254,6 +264,13 @@ type DatabaseOption struct {
 	Database string `json:"database"`
 	Version  string `json:"version"`
 	Address  string `json:"address"`
+}
+
+type DatabaseItem struct {
+	ID       uint   `json:"id"`
+	From     string `json:"from"`
+	Database string `json:"database"`
+	Name     string `json:"name"`
 }
 
 type DatabaseCreate struct {

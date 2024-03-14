@@ -288,6 +288,13 @@ html {
     }
 }
 
+.mini-border-card {
+    width: 100%;
+    .el-card__body {
+        --el-card-padding: 12px 12px 0 22px;
+    }
+}
+
 .xterm-viewport::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -307,7 +314,6 @@ html {
 
 .table-link {
     color: $primary-color;
-    font-weight: bold;
     cursor: pointer;
 }
 
@@ -399,4 +405,24 @@ html {
     height: 16px;
     display: inline-block;
     vertical-align: middle;
+}
+
+.p-ml-5 {
+    margin-left: 5px !important;
+}
+
+.p-mb-5 {
+    margin-bottom: 5px !important;
+}
+
+.p-w-200 {
+    width: 200px !important;
+}
+
+.p-ml-20 {
+    margin-left: 20px !important;
+}
+
+.p-mt-20 {
+    margin-top: 20px !important;
 }

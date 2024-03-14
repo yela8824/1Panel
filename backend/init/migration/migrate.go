@@ -60,6 +60,20 @@ func Init() {
 		migrations.AddDatabaseSSL,
 		migrations.AddDefaultCA,
 		migrations.AddSettingRecycleBin,
+		migrations.UpdateWebsiteBackupRecord,
+
+		migrations.AddTablePHPExtensions,
+		migrations.AddTableDatabasePostgresql,
+		migrations.AddPostgresqlSuperUser,
+		migrations.UpdateCronjobWithWebsite,
+		migrations.UpdateOneDriveToken,
+		migrations.UpdateCronjobSpec,
+		migrations.UpdateBackupRecordPath,
+		migrations.UpdateSnapshotRecords,
+
+		migrations.UpdateWebDavConf,
+
+		migrations.AddSnapshotIgnore,
 	})
 	if err := m.Migrate(); err != nil {
 		global.LOG.Error(err)

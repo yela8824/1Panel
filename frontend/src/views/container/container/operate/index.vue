@@ -27,12 +27,30 @@
                     <el-alert
                         v-if="dialogData.title === 'edit' && isFromApp(dialogData.rowData!)"
                         :title="$t('container.containerFromAppHelper')"
-                        class="common-prompt"
                         :closable="false"
                         type="error"
                     />
-                    <el-form-item :label="$t('commons.table.name')" prop="name">
-                        <el-input clearable v-model.trim="dialogData.rowData!.name" />
+                    <el-form-item class="mt-5" :label="$t('commons.table.name')" prop="name">
+                        <el-input
+                            :disabled="isFromApp(dialogData.rowData!)"
+                            clearable
+                            v-model.trim="dialogData.rowData!.name"
+                        />
+                        <div v-if="dialogData.title === 'edit' && isFromApp(dialogData.rowData!)">
+                            <span class="input-help">
+                                {{ $t('container.containerFromAppHelper1') }}
+                                <el-button
+                                    style="margin-left: -5px"
+                                    size="small"
+                                    text
+                                    type="primary"
+                                    @click="goRouter()"
+                                >
+                                    <el-icon><Position /></el-icon>
+                                    {{ $t('firewall.quickJump') }}
+                                </el-button>
+                            </span>
+                        </div>
                     </el-form-item>
                     <el-form-item :label="$t('container.image')" prop="image">
                         <el-checkbox v-model="dialogData.rowData!.imageInput" :label="$t('container.input')" />
@@ -58,8 +76,8 @@
                     </el-form-item>
                     <el-form-item :label="$t('commons.table.port')">
                         <el-radio-group v-model="dialogData.rowData!.publishAllPorts" class="ml-4">
-                            <el-radio :label="false">{{ $t('container.exposePort') }}</el-radio>
-                            <el-radio :label="true">{{ $t('container.exposeAll') }}</el-radio>
+                            <el-radio :value="false">{{ $t('container.exposePort') }}</el-radio>
+                            <el-radio :value="true">{{ $t('container.exposeAll') }}</el-radio>
                         </el-radio-group>
                     </el-form-item>
                     <el-form-item v-if="!dialogData.rowData!.publishAllPorts">
@@ -121,8 +139,8 @@
                         <div v-for="(row, index) in dialogData.rowData!.volumes" :key="index" style="width: 100%">
                             <el-card class="mt-1">
                                 <el-radio-group v-model="row.isVolume">
-                                    <el-radio-button :label="true">{{ $t('container.volumeOption') }}</el-radio-button>
-                                    <el-radio-button :label="false">{{ $t('container.hostOption') }}</el-radio-button>
+                                    <el-radio-button :value="true">{{ $t('container.volumeOption') }}</el-radio-button>
+                                    <el-radio-button :value="false">{{ $t('container.hostOption') }}</el-radio-button>
                                 </el-radio-group>
                                 <el-button
                                     class="float-right mt-3"
@@ -198,10 +216,10 @@
                     </el-form-item>
                     <el-form-item :label="$t('container.restartPolicy')" prop="restartPolicy">
                         <el-radio-group v-model="dialogData.rowData!.restartPolicy">
-                            <el-radio label="no">{{ $t('container.no') }}</el-radio>
-                            <el-radio label="always">{{ $t('container.always') }}</el-radio>
-                            <el-radio label="on-failure">{{ $t('container.onFailure') }}</el-radio>
-                            <el-radio label="unless-stopped">{{ $t('container.unlessStopped') }}</el-radio>
+                            <el-radio value="no">{{ $t('container.no') }}</el-radio>
+                            <el-radio value="always">{{ $t('container.always') }}</el-radio>
+                            <el-radio value="on-failure">{{ $t('container.onFailure') }}</el-radio>
+                            <el-radio value="unless-stopped">{{ $t('container.unlessStopped') }}</el-radio>
                         </el-radio-group>
                     </el-form-item>
                     <el-form-item :label="$t('container.cpuShare')" prop="cpuShares">
@@ -222,7 +240,11 @@
                             {{ $t('container.limitHelper', [limits.cpu]) }}{{ $t('commons.units.core') }}
                         </span>
                     </el-form-item>
-                    <el-form-item :label="$t('container.memoryLimit')" prop="memory">
+                    <el-form-item
+                        :label="$t('container.memoryLimit')"
+                        prop="memory"
+                        :rules="checkFloatNumberRange(0, Number(limits.memory))"
+                    >
                         <el-input class="mini-form-item" v-model="dialogData.rowData!.memory">
                             <template #append><div style="width: 35px">MB</div></template>
                         </el-input>
@@ -232,7 +254,7 @@
                         <el-input
                             type="textarea"
                             :placeholder="$t('container.tagHelper')"
-                            :autosize="{ minRows: 2, maxRows: 10 }"
+                            :rows="3"
                             v-model="dialogData.rowData!.labelsStr"
                         />
                     </el-form-item>
@@ -240,7 +262,7 @@
                         <el-input
                             type="textarea"
                             :placeholder="$t('container.tagHelper')"
-                            :autosize="{ minRows: 2, maxRows: 10 }"
+                            :rows="3"
                             v-model="dialogData.rowData!.envStr"
                         />
                     </el-form-item>
@@ -278,6 +300,7 @@ import {
 import { Container } from '@/api/interface/container';
 import { MsgError, MsgSuccess } from '@/utils/message';
 import { checkIpV4V6, checkPort } from '@/utils/util';
+import router from '@/routers';
 
 const loading = ref(false);
 interface DialogProps {
@@ -372,6 +395,10 @@ const handlePortsAdd = () => {
 };
 const handlePortsDelete = (index: number) => {
     dialogData.value.rowData!.exposedPorts.splice(index, 1);
+};
+
+const goRouter = async () => {
+    router.push({ name: 'AppInstalled' });
 };
 
 const handleVolumesAdd = () => {

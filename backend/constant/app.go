@@ -12,6 +12,7 @@ const (
 	Rebuilding  = "Rebuilding"
 	Syncing     = "Syncing"
 	SyncSuccess = "SyncSuccess"
+	Paused      = "Paused"
 	SyncErr     = "SyncErr"
 
 	ContainerPrefix = "1Panel-"
@@ -19,10 +20,14 @@ const (
 	AppNormal   = "Normal"
 	AppTakeDown = "TakeDown"
 
-	AppOpenresty = "openresty"
-	AppMysql     = "mysql"
-	AppMariaDB   = "mariadb"
-	AppRedis     = "redis"
+	AppOpenresty  = "openresty"
+	AppMysql      = "mysql"
+	AppMariaDB    = "mariadb"
+	AppPostgresql = "postgresql"
+	AppRedis      = "redis"
+	AppPostgres   = "postgres"
+	AppMongodb    = "mongodb"
+	AppMemcached  = "memcached"
 
 	AppResourceLocal  = "local"
 	AppResourceRemote = "remote"

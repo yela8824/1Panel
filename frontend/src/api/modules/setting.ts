@@ -84,6 +84,9 @@ export const handleRecover = (params: Backup.Recover) => {
 export const handleRecoverByUpload = (params: Backup.Recover) => {
     return http.post(`/settings/backup/recover/byupload`, params, TimeoutEnum.T_1D);
 };
+export const refreshOneDrive = () => {
+    return http.post(`/settings/backup/refresh/onedrive`, {});
+};
 export const downloadBackupRecord = (params: Backup.RecordDownload) => {
     return http.post<string>(`/settings/backup/record/download`, params, TimeoutEnum.T_10M);
 };
@@ -91,14 +94,17 @@ export const deleteBackupRecord = (params: { ids: number[] }) => {
     return http.post(`/settings/backup/record/del`, params);
 };
 export const searchBackupRecords = (params: Backup.SearchBackupRecord) => {
-    return http.post<ResPage<Backup.RecordInfo>>(`/settings/backup/record/search`, params);
+    return http.post<ResPage<Backup.RecordInfo>>(`/settings/backup/record/search`, params, TimeoutEnum.T_5M);
+};
+export const searchBackupRecordsByCronjob = (params: Backup.SearchBackupRecordByCronjob) => {
+    return http.post<ResPage<Backup.RecordInfo>>(`/settings/backup/record/search/bycronjob`, params, TimeoutEnum.T_5M);
 };
 
 export const getBackupList = () => {
     return http.get<Array<Backup.BackupInfo>>(`/settings/backup/search`);
 };
 export const getOneDriveInfo = () => {
-    return http.get<string>(`/settings/backup/onedrive`);
+    return http.get<Backup.OneDriveInfo>(`/settings/backup/onedrive`);
 };
 export const getFilesFromBackup = (type: string) => {
     return http.post<Array<any>>(`/settings/backup/search/files`, { type: type });

@@ -21,13 +21,6 @@ build/1panel
 *.iml
 *.ipr
 
-# NetBeans
-nbproject/private/
-build/
-nbbuild/
-dist/
-nbdist/
-.nb-gradle/
 
 # Test binary, built with `go test -c`
 *.test
@@ -44,6 +37,15 @@ cmd/server/web/monacoeditorwork
 cmd/server/web/index.html
 frontend/auto-imports.d.ts
 frontend/components.d.ts
+frontend/src/xpack
+backend/xpack
+backend/router/entry_xpack.go
+backend/server/init_xpack.go
+plugins/openresty/waf/db
+plugins/openresty/waf/data
+plugins/openresty/waf/sites
+plugins/openresty/waf/conf/websites.json
+
 
 .history/
 dist/

@@ -92,7 +92,7 @@
                                 <el-radio :label="'installed'" :value="'installed'">
                                     {{ $t('website.appInstalled') }}
                                 </el-radio>
-                                <el-radio :label="'new'">
+                                <el-radio :label="'new'" :value="'new'">
                                     {{ $t('website.appNew') }}
                                 </el-radio>
                             </el-radio-group>
@@ -104,7 +104,7 @@
                         >
                             <el-select v-model="website.appInstallId">
                                 <el-option
-                                    v-for="(appInstall, index) in appInstalles"
+                                    v-for="(appInstall, index) in appInstalls"
                                     :key="index"
                                     :label="appInstall.name"
                                     :value="appInstall.id"
@@ -278,7 +278,7 @@
                     <el-form-item :label="$t('website.otherDomains')" prop="otherDomains">
                         <el-input
                             type="textarea"
-                            :autosize="{ minRows: 2, maxRows: 6 }"
+                            :rows="3"
                             v-model="website.otherDomains"
                             :placeholder="$t('website.domainHelper')"
                         ></el-input>
@@ -327,7 +327,7 @@
         <Check ref="preCheckRef"></Check>
         <el-card width="30%" v-if="!versionExist" class="mask-prompt">
             <span>
-                {{ $t('runtime.openrestryWarn') }}
+                {{ $t('runtime.openrestyWarn') }}
             </span>
         </el-card>
     </el-drawer>
@@ -410,11 +410,11 @@ const open = ref(false);
 const loading = ref(false);
 const groups = ref<Group.GroupInfo[]>([]);
 
-const appInstalles = ref<App.AppInstalled[]>([]);
+const appInstalls = ref<App.AppInstalled[]>([]);
 const appReq = reactive({
     type: 'website',
     page: 1,
-    pageSize: 20,
+    pageSize: 100,
 });
 const apps = ref<App.App[]>([]);
 const appVersions = ref<string[]>([]);
@@ -442,8 +442,8 @@ const changeType = (type: string) => {
     switch (type) {
         case 'deployment':
             website.value.appType = 'installed';
-            if (appInstalles.value && appInstalles.value.length > 0) {
-                website.value.appInstallId = appInstalles.value[0].id;
+            if (appInstalls.value && appInstalls.value.length > 0) {
+                website.value.appInstallId = appInstalls.value[0].id;
             }
             break;
         case 'runtime':
@@ -459,7 +459,7 @@ const changeType = (type: string) => {
 
 const searchAppInstalled = () => {
     GetAppInstalled({ type: 'website', unused: true, all: true, page: 1, pageSize: 100 }).then((res) => {
-        appInstalles.value = res.data;
+        appInstalls.value = res.data;
         if (res.data && res.data.length > 0) {
             website.value.appInstallId = res.data[0].id;
         }
@@ -520,6 +520,7 @@ const changeRuntimeType = () => {
         runtimeReq.value.status = 'normal';
     } else {
         runtimeReq.value.status = 'running';
+        website.value.appinstall.advanced = false;
     }
     website.value.runtimeID = undefined;
     getRuntimes();
